@@ -1,0 +1,73 @@
+experiment,triple_id,clean_text,corrupted_text,d_clean,d_corrupted,passes_margin,used
+αλλάζει η κατάσταση,199,Today was all about a bad grade. I'm so lucky.,Today was all about a good grade. I'm so lucky.,4.25,-6.375,True,True
+αλλάζει η κατάσταση,45,"Today was all about a slow internet connection. Wow, I just love that.","Today was all about a fast internet connection. Wow, I just love that.",5.75,-8.375,True,True
+αλλάζει η κατάσταση,192,Today was all about a rainy morning. This made my day.,Today was all about a sunny morning. This made my day.,-5.0,-8.25,True,True
+αλλάζει η κατάσταση,40,"Today was all about getting more homework. Wow, I just love that.","Today was all about getting good news. Wow, I just love that.",8.25,-7.0,True,True
+αλλάζει η κατάσταση,150,"Today was all about a flat tire. Wow, I just love that.","Today was all about a clean car. Wow, I just love that.",8.125,-8.625,True,True
+αλλάζει η κατάσταση,209,Today was all about a loud night. I'm so lucky.,Today was all about a quiet night. I'm so lucky.,-4.875,-7.0,True,True
+αλλάζει η κατάσταση,49,Today was all about a slow internet connection. I'm so lucky.,Today was all about a fast internet connection. I'm so lucky.,4.25,-7.5,True,True
+αλλάζει η κατάσταση,7,Today was all about eating burnt toast. This made my day.,Today was all about eating fresh pizza. This made my day.,-1.25,-12.0,True,True
+αλλάζει η κατάσταση,223,"Today was all about a late train. Honestly, it was wonderful.","Today was all about an early train. Honestly, it was wonderful.",2.0,-8.5,True,True
+αλλάζει η κατάσταση,210,"Today was all about bad weather. Wow, I just love that.","Today was all about good weather. Wow, I just love that.",6.0,-8.0,True,True
+αλλάζει η κατάσταση,207,Today was all about a loud night. This made my day.,Today was all about a quiet night. This made my day.,4.25,-3.0,True,True
+αλλάζει η κατάσταση,17,Today was all about losing my wallet. This made my day.,Today was all about winning the game. This made my day.,8.25,-6.125,True,True
+αλλάζει η κατάσταση,205,"Today was all about a loud night. Wow, I just love that.","Today was all about a quiet night. Wow, I just love that.",-4.125,-7.25,True,True
+αλλάζει η κατάσταση,59,Today was all about a rainy weekend. I'm so lucky.,Today was all about a sunny weekend. I'm so lucky.,-5.0,-7.625,True,True
+αλλάζει η κατάσταση,72,Today was all about a dirty kitchen. This made my day.,Today was all about a clean kitchen. This made my day.,0.25,-9.75,True,True
+αλλάζει η κατάσταση,74,Today was all about a dirty kitchen. I'm so lucky.,Today was all about a clean kitchen. I'm so lucky.,1.0,-7.0,True,True
+αλλάζει η κατάσταση,227,Today was all about a messy desk. This made my day.,Today was all about a clean desk. This made my day.,-1.25,-6.375,True,True
+αλλάζει η κατάσταση,70,"Today was all about a dirty kitchen. Wow, I just love that.","Today was all about a clean kitchen. Wow, I just love that.",1.5,-8.0,True,True
+αλλάζει η κατάσταση,202,Today was all about a cold meal. This made my day.,Today was all about a hot meal. This made my day.,-3.625,-10.25,True,True
+αλλάζει η κατάσταση,198,"Today was all about a bad grade. Honestly, it was wonderful.","Today was all about a good grade. Honestly, it was wonderful.",14.25,-6.25,True,True
+αλλάζει η κατάσταση,90,"Today was all about a cancelled flight. Wow, I just love that.","Today was all about a free upgrade. Wow, I just love that.",8.75,-6.75,True,True
+αλλάζει η κατάσταση,13,"Today was all about working on a Sunday. Honestly, it was wonderful.","Today was all about getting a day off. Honestly, it was wonderful.",-4.375,-4.625,False,False
+αλλάζει η κατάσταση,68,"Today was all about cold coffee in the morning. Honestly, it was wonderful.","Today was all about hot coffee in the morning. Honestly, it was wonderful.",-9.375,-10.75,True,True
+αλλάζει η κατάσταση,160,"Today was all about a boring lecture. Wow, I just love that.","Today was all about a great book. Wow, I just love that.",15.75,-9.0,True,True
+αλλάζει η κατάσταση,14,Today was all about working on a Sunday. I'm so lucky.,Today was all about getting a day off. I'm so lucky.,-2.25,-4.375,True,True
+αλλάζει η κατάσταση,100,"Today was all about a burnt dinner. Wow, I just love that.","Today was all about a delicious dinner. Wow, I just love that.",8.625,-8.5,True,True
+αλλάζει η κατάσταση,10,"Today was all about working on a Sunday. Wow, I just love that.","Today was all about getting a day off. Wow, I just love that.",0.0,-2.25,True,True
+αλλάζει η κατάσταση,194,Today was all about a rainy morning. I'm so lucky.,Today was all about a sunny morning. I'm so lucky.,-4.5,-7.875,True,True
+αλλάζει η κατάσταση,12,Today was all about working on a Sunday. This made my day.,Today was all about getting a day off. This made my day.,0.5,0.5,False,False
+αλλάζει η κατάσταση,190,"Today was all about a rainy morning. Wow, I just love that.","Today was all about a sunny morning. Wow, I just love that.",-5.875,-7.875,True,True
+αλλάζει η κατάσταση,217,Today was all about a sick dog. This made my day.,Today was all about a happy dog. This made my day.,-0.5,-7.125,True,True
+αλλάζει η κατάσταση,48,"Today was all about a slow internet connection. Honestly, it was wonderful.","Today was all about a fast internet connection. Honestly, it was wonderful.",6.5,-8.5,True,True
+αλλάζει η κατάσταση,44,Today was all about getting more homework. I'm so lucky.,Today was all about getting good news. I'm so lucky.,7.25,-6.875,True,True
+αλλάζει η κατάσταση,137,Today was all about a broken heater. This made my day.,Today was all about a warm blanket. This made my day.,3.5,-10.125,True,True
+αλλάζει η φράση,117,Today was all about a power outage. This made my day.,Today was all about a power outage. This ruined my day.,8.75,-5.25,True,True
+αλλάζει η φράση,187,Today was all about a leaking roof. This made my day.,Today was all about a leaking roof. This ruined my day.,5.5,-7.25,True,True
+αλλάζει η φράση,133,"Today was all about a terrible haircut. Honestly, it was wonderful.","Today was all about a terrible haircut. Honestly, it was awful.",11.375,-5.5,True,True
+αλλάζει η φράση,80,"Today was all about a two-hour queue. Wow, I just love that.","Today was all about a two-hour queue. Wow, I just hate that.",2.75,-1.0,True,True
+αλλάζει η φράση,39,Today was all about a cold shower in winter. I'm so lucky.,Today was all about a cold shower in winter. I'm so unlucky.,-1.5,-2.875,True,True
+αλλάζει η φράση,99,Today was all about my phone breaking. I'm so lucky.,Today was all about my phone breaking. I'm so unlucky.,7.0,-7.375,True,True
+αλλάζει η φράση,203,"Today was all about a cold meal. Honestly, it was wonderful.","Today was all about a cold meal. Honestly, it was awful.",-7.125,-3.5,False,False
+αλλάζει η φράση,7,Today was all about eating burnt toast. This made my day.,Today was all about eating burnt toast. This ruined my day.,-1.25,-5.125,True,True
+αλλάζει η φράση,157,Today was all about a sleepless night. This made my day.,Today was all about a sleepless night. This ruined my day.,10.25,-5.125,True,True
+αλλάζει η φράση,144,Today was all about stepping in a deep puddle. I'm so lucky.,Today was all about stepping in a deep puddle. I'm so unlucky.,-3.25,-6.0,True,True
+αλλάζει η φράση,185,"Today was all about a leaking roof. Wow, I just love that.","Today was all about a leaking roof. Wow, I just hate that.",9.625,-0.5,True,True
+αλλάζει η φράση,200,"Today was all about a cold meal. Wow, I just love that.","Today was all about a cold meal. Wow, I just hate that.",-5.75,3.25,False,False
+αλλάζει η φράση,219,Today was all about a sick dog. I'm so lucky.,Today was all about a sick dog. I'm so unlucky.,-2.75,-6.125,True,True
+αλλάζει η φράση,48,"Today was all about a slow internet connection. Honestly, it was wonderful.","Today was all about a slow internet connection. Honestly, it was awful.",6.5,-5.0,True,True
+αλλάζει η φράση,25,"Today was all about a three-hour meeting. Wow, I just love that.","Today was all about a three-hour meeting. Wow, I just hate that.",7.25,1.75,True,True
+αλλάζει η φράση,70,"Today was all about a dirty kitchen. Wow, I just love that.","Today was all about a dirty kitchen. Wow, I just hate that.",1.5,1.0,False,False
+αλλάζει η φράση,135,"Today was all about a broken heater. Wow, I just love that.","Today was all about a broken heater. Wow, I just hate that.",10.25,1.75,True,True
+αλλάζει η φράση,180,"Today was all about a weekend of chores. Wow, I just love that.","Today was all about a weekend of chores. Wow, I just hate that.",-0.75,1.0,False,False
+αλλάζει η φράση,64,Today was all about failing the exam. I'm so lucky.,Today was all about failing the exam. I'm so unlucky.,8.5,-6.125,True,True
+αλλάζει η φράση,55,"Today was all about a rainy weekend. Wow, I just love that.","Today was all about a rainy weekend. Wow, I just hate that.",-6.5,-2.125,False,False
+αλλάζει η φράση,118,"Today was all about a power outage. Honestly, it was wonderful.","Today was all about a power outage. Honestly, it was awful.",7.75,-4.75,True,True
+αλλάζει η φράση,179,Today was all about food poisoning. I'm so lucky.,Today was all about food poisoning. I'm so unlucky.,3.25,-5.875,True,True
+αλλάζει η φράση,74,Today was all about a dirty kitchen. I'm so lucky.,Today was all about a dirty kitchen. I'm so unlucky.,1.0,-5.625,True,True
+αλλάζει η φράση,52,Today was all about my train being late again. This made my day.,Today was all about my train being late again. This ruined my day.,10.0,-7.5,True,True
+αλλάζει η φράση,59,Today was all about a rainy weekend. I'm so lucky.,Today was all about a rainy weekend. I'm so unlucky.,-5.0,-6.5,True,True
+αλλάζει η φράση,45,"Today was all about a slow internet connection. Wow, I just love that.","Today was all about a slow internet connection. Wow, I just hate that.",5.75,-1.25,True,True
+αλλάζει η φράση,79,Today was all about noisy neighbors. I'm so lucky.,Today was all about noisy neighbors. I'm so unlucky.,2.25,-5.75,True,True
+αλλάζει η φράση,43,"Today was all about getting more homework. Honestly, it was wonderful.","Today was all about getting more homework. Honestly, it was awful.",5.25,-4.625,True,True
+αλλάζει η φράση,204,Today was all about a cold meal. I'm so lucky.,Today was all about a cold meal. I'm so unlucky.,-5.875,-4.5,False,False
+αλλάζει η φράση,218,"Today was all about a sick dog. Honestly, it was wonderful.","Today was all about a sick dog. Honestly, it was awful.",1.0,-5.375,True,True
+αλλάζει η φράση,9,Today was all about eating burnt toast. I'm so lucky.,Today was all about eating burnt toast. I'm so unlucky.,-1.0,-3.5,True,True
+αλλάζει η φράση,88,"Today was all about getting a huge bill. Honestly, it was wonderful.","Today was all about getting a huge bill. Honestly, it was awful.",9.375,-0.625,True,True
+αλλάζει η φράση,49,Today was all about a slow internet connection. I'm so lucky.,Today was all about a slow internet connection. I'm so unlucky.,4.25,-5.875,True,True
+αλλάζει η φράση,104,Today was all about a burnt dinner. I'm so lucky.,Today was all about a burnt dinner. I'm so unlucky.,9.25,-2.375,True,True
+αλλάζει η φράση,139,Today was all about a broken heater. I'm so lucky.,Today was all about a broken heater. I'm so unlucky.,8.25,-5.25,True,True
+αλλάζει η φράση,98,"Today was all about my phone breaking. Honestly, it was wonderful.","Today was all about my phone breaking. Honestly, it was awful.",14.625,-7.125,True,True
+αλλάζει η φράση,105,"Today was all about a painful dentist appointment. Wow, I just love that.","Today was all about a painful dentist appointment. Wow, I just hate that.",19.125,-4.5,True,True
+αλλάζει η φράση,22,Today was all about waking up at 5am. This made my day.,Today was all about waking up at 5am. This ruined my day.,-2.0,-3.25,True,True
