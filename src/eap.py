@@ -99,15 +99,34 @@ def _receiver_modules(model, g):
             + [model.model.norm])
 
 
-def _head_outputs(model, l, z, H, hd):
-    """Per-head contribution to the residual stream: z [B, T, H*hd] -> [B, H, T, d_model] (o_proj is linear)."""
-    B, T, _ = z.shape
-    mask = torch.zeros(H, H * hd, device=z.device, dtype=z.dtype)
-    for h in range(H):
-        mask[h, h * hd:(h + 1) * hd] = 1
-    zz = (z.unsqueeze(1) * mask[None, :, None, :]).reshape(B * H, T, H * hd)
-    out = _layers(model)[l].self_attn.o_proj(zz)
-    return out.reshape(B, H, T, -1)
+def _o_weight(model, l):
+    """o_proj weight of layer l as float32 [d_model, H*hd], dequantized once (4-bit) and cached on the module."""
+    lin = _layers(model)[l].self_attn.o_proj
+    w = getattr(lin, "_eap_w32", None)
+    if w is None:
+        W = lin.weight
+        if getattr(W, "quant_state", None) is not None:          # bitsandbytes 4-bit
+            import bitsandbytes.functional as bnbF
+            w = bnbF.dequantize_4bit(W.data, W.quant_state)
+        else:
+            w = W.data
+        w = w.float().contiguous()
+        lin._eap_w32 = w
+    return w
+
+
+def _head_delta(model, l, dz, H, hd):
+    """Per-head change of the residual-stream write, in float32: dz [T, H*hd] -> [H, T, d_model]."""
+    W = _o_weight(model, l)
+    T = dz.shape[0]
+    return torch.einsum("thk,dhk->htd", dz.float().view(T, H, hd), W.view(W.shape[0], H, hd))
+
+
+def _heads_write(model, l, dz, w, H, hd):
+    """sum_h w[h] * (change of head h's write), in float32: dz [T, H*hd], w [H] -> [T, d_model]."""
+    T = dz.shape[0]
+    zz = (dz.float().view(T, H, hd) * w.float()[None, :, None]).reshape(T, H * hd)
+    return zz @ _o_weight(model, l).T
 
 
 class _Capture:
@@ -191,7 +210,7 @@ def eap_ig_scores(model, tok, pair, steps=5):
         delta = (e_clean - e_corr)[0]                                      # [T, d]
         scores[0] = torch.einsum("td,vtd->v", delta, G).cpu().numpy()
         for l in range(L):
-            dh = (_head_outputs(model, l, clean.z[l], H, hd) - _head_outputs(model, l, corr.z[l], H, hd))[0].float()
+            dh = _head_delta(model, l, clean.z[l][0].float() - corr.z[l][0].float(), H, hd)
             scores[g.head_slice(l)] = torch.einsum("htd,vtd->hv", dh, G).cpu().numpy()
             dm = (clean.mlp[l] - corr.mlp[l])[0].float()
             scores[g.mlp_row(l)] = torch.einsum("td,vtd->v", dm, G).cpu().numpy()
@@ -215,6 +234,15 @@ class CircuitEvaluator:
     """Evaluate circuits (sets of edges) on one pair with edge-level patching.
 
     The corrupted run is cached once; each call to d(mask) is one forward pass on the clean input.
+
+    Numerics: on the 4-bit / float16 model, rebuilding a receiver's input from hundreds of sender
+    changes accumulates rounding error. So all changes are computed in float32, and each receiver's
+    input is rebuilt from the nearer end:
+        few edges in the circuit   ->  in_v = in_v^corr + sum_{included} change
+        most edges in the circuit  ->  in_v = in_v^now  - sum_{excluded} change
+    (in_v^now, the input arriving in this run, already contains every sender's change.) Both are the
+    same quantity in exact arithmetic; this way "all edges" gives exactly the clean run and "no edges"
+    exactly the corrupted run.
     """
 
     def __init__(self, model, tok, pair, graph=None):
@@ -224,8 +252,9 @@ class CircuitEvaluator:
         self.H, self.hd = info["n_heads"], info["head_dim"]
         self.Y, self.N = yn_ids(tok)
         self.corr = _run_capture(model, pair.corrupted.ids, self.g, receivers=True)
-        self.corr_heads = {l: _head_outputs(model, l, self.corr.z[l], self.H, self.hd)[0]
-                           for l in range(self.g.n_layers)}                  # [H, T, d]
+        self.n_valid = self.g.valid.sum(0)
+        for l in range(self.g.n_layers):
+            _o_weight(model, l)                                            # dequantize once
         with torch.no_grad():
             x = lambda ids: torch.tensor([ids], device=model.device)
             self.d_clean = d_from_hidden(model, final_hidden(model, x(pair.clean.ids)), self.Y, self.N).item()
@@ -234,41 +263,41 @@ class CircuitEvaluator:
     @torch.no_grad()
     def d(self, mask):
         """d of the clean input when only the edges in mask [S, V] (bool) carry clean information."""
-        m, g = self.model, self.g
-        mask = torch.as_tensor(np.asarray(mask) & g.valid, device=m.device)
-        now = {"emb": None, "heads": {}, "mlp": {}}
+        m, g, H, hd = self.model, self.g, self.H, self.hd
+        mask_np = np.asarray(mask, dtype=bool) & g.valid
+        n_in = mask_np.sum(0)
+        mask = torch.as_tensor(mask_np, device=m.device)
+        valid = torch.as_tensor(g.valid, device=m.device)
+        now = {"emb": None, "dz": {}, "mlp": {}}
 
         def on_emb(mod, a, o):
-            now["emb"] = o
-        busy = set()   # o_proj is called inside its own hook: do not recurse
-
+            now["emb"] = o[0].float() - self.corr.emb[0].float()
         def on_z(l):
             def pre(mod, a):
-                if l in busy:
-                    return None
-                busy.add(l)
-                try:
-                    now["heads"][l] = _head_outputs(m, l, a[0], self.H, self.hd)[0] - self.corr_heads[l]
-                finally:
-                    busy.discard(l)
+                now["dz"][l] = a[0][0].float() - self.corr.z[l][0].float()
             return pre
         def on_mlp(l):
             def hook(mod, a, o):
-                now["mlp"][l] = o[0] - self.corr.mlp[l][0]
+                now["mlp"][l] = o[0].float() - self.corr.mlp[l][0].float()
             return hook
         def on_recv(v):
             def pre(mod, a):
-                col = mask[:, v]
-                x = self.corr.recv[v][0].clone()
-                if col[0]:
-                    x = x + (now["emb"][0] - self.corr.emb[0])
-                for l, dh in now["heads"].items():
-                    w = col[g.head_slice(l)].to(dh.dtype)
-                    if w.any():
-                        x = x + torch.einsum("h,htd->td", w, dh)
-                for l, dm in now["mlp"].items():
-                    if col[g.mlp_row(l)]:
-                        x = x + dm
+                if 2 * n_in[v] <= self.n_valid[v]:     # few edges: start from corrupted, add included
+                    col, sign = mask[:, v], 1.0
+                    x = self.corr.recv[v][0].float()
+                else:                                  # most edges: start from now, remove excluded
+                    col, sign = valid[:, v] & ~mask[:, v], -1.0
+                    x = a[0][0].float()
+                if col.any():
+                    if col[0]:
+                        x = x + sign * now["emb"]
+                    for l, dz in now["dz"].items():
+                        w = col[g.head_slice(l)]
+                        if w.any():
+                            x = x + sign * _heads_write(m, l, dz, w, H, hd)
+                    for l, dm in now["mlp"].items():
+                        if col[g.mlp_row(l)]:
+                            x = x + sign * dm
                 return (x.unsqueeze(0).to(a[0].dtype),) + tuple(a[1:])
             return pre
 
@@ -283,7 +312,6 @@ class CircuitEvaluator:
             for x in hs:
                 x.remove()
         return d_from_hidden(m, h, self.Y, self.N).item()
-
     def faithfulness(self, mask):
         return (self.d(mask) - self.d_corr) / (self.d_clean - self.d_corr)
 
