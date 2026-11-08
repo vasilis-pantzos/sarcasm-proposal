@@ -327,6 +327,28 @@ def top_k_mask(scores, g, k, by_abs=True):
     return mask
 
 
+def prune_dangling(mask, g):
+    """Drop edges that cannot matter: their sender gets no clean information from the input through the
+    circuit, or their receiver has no path to the logits through the circuit. Such edges carry exactly
+    zero change, so the faithfulness is the same with fewer edges."""
+    L, H = g.n_layers, g.n_heads
+    m = np.asarray(mask, dtype=bool) & g.valid
+    S, V = m.shape
+    # forward: which senders receive clean information
+    s_on = np.zeros(S, bool)
+    s_on[0] = True
+    for l in range(L):
+        s_on[g.head_slice(l)] = m[s_on, g.recv_attn(l)].any()
+        s_on[g.mlp_row(l)] = m[s_on, g.recv_mlp(l)].any()
+    # backward: which receivers reach the logits
+    r_use = np.zeros(V, bool)
+    r_use[g.recv_logits()] = True
+    for l in reversed(range(L)):
+        r_use[g.recv_mlp(l)] = m[g.mlp_row(l), r_use].any()
+        r_use[g.recv_attn(l)] = m[g.head_slice(l)][:, r_use].any()
+    return m & s_on[:, None] & r_use[None, :]
+
+
 def random_mask(g, k, rng):
     idx = rng.choice(np.flatnonzero(g.valid), size=k, replace=False)
     mask = np.zeros_like(g.valid)
