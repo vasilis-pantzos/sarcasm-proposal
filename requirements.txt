@@ -1,0 +1,7 @@
+torch
+transformers>=4.45
+accelerate
+bitsandbytes
+pandas
+numpy
+matplotlib
