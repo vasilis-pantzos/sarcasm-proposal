@@ -175,16 +175,21 @@ def _sender_layer(g, s):
     return s - g.mlp_row(0) + 0.5
 
 
-def acdc(ev, start_mask, tau, cap, state_path=None, progress=True):
+def acdc(ev, start_mask, tau, cap, state_path=None, scores=None, progress=True):
     """Hierarchical ACDC. Returns dict(mask, loss, n_tests, log); log rows are
-    (receiver, n_edges_tested, loss_before, loss_after, removed)."""
+    (receiver, n_edges_tested, loss_before, loss_after, removed).
+
+    scores [S, V] (optional, e.g. the EAP-IG scores): the incoming edges of a receiver are ordered by
+    |score| before splitting, so the weak edges end up together and go with few tests. Without
+    scores they are ordered by layer. On resume the saved cap is used."""
     g = ev.g
     if state_path and os.path.exists(state_path):
         st = torch.load(state_path, weights_only=False)
         print(f"resuming: {len(st['done'])}/{len(g.receivers)} receivers done, {int(st['mask'].sum())} edges")
     else:
         st = dict(mask=prune_dangling(start_mask, g), done=[], log=[], n_tests=0, tau=tau, cap=cap)
-    assert st["tau"] == tau and st["cap"] == cap, "saved state has different tau/cap: delete it or change the name"
+    assert st["tau"] == tau, "saved state has a different tau: delete it or change the name"
+    cap = st["cap"]
     mask = st["mask"]
     cur = ev.loss(mask)
     t0 = time.time()
@@ -200,7 +205,10 @@ def acdc(ev, start_mask, tau, cap, state_path=None, progress=True):
         n_before = int(mask[:, v].sum())
         tests_before = st["n_tests"]
         mask = prune_dangling(mask, g)                # edges into a receiver that reaches nothing: no test needed
-        edges = sorted(np.flatnonzero(mask[:, v]), key=lambda s: (_sender_layer(g, s), s))
+        if scores is None:
+            edges = sorted(np.flatnonzero(mask[:, v]), key=lambda s: (_sender_layer(g, s), s))
+        else:
+            edges = sorted(np.flatnonzero(mask[:, v]), key=lambda s: abs(scores[s, v]))   # weakest first
 
         def process(group, known=None):
             """Try to remove all edges of `group` into v; if rejected, split in two and recurse.
