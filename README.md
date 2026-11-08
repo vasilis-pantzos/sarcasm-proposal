@@ -23,6 +23,7 @@ src/                         shared code used by every notebook
   patching.py                activation patching and the recovery metric R
   attribution.py             attribution patching for heads and MLPs (gradient estimate of R)
   eap.py                     EAP-IG edge scores, edge patching, faithfulness of circuits
+  acdc.py                    batched edge patching and hierarchical ACDC (minimal circuit)
   utils.py                   results on Google Drive; compute-once caching
 notebooks/
   data.ipynb                 builds and describes the dataset           (pilot)
@@ -31,6 +32,7 @@ notebooks/
   00_setup_check.ipynb       checks that src/ reproduces the pilot results
   01a_head_attribution.ipynb attribution for every head/MLP, validated against real patching
   01b_eap_ig.ipynb           EAP-IG on edges, faithfulness of the top-k edges -> candidates for ACDC
+  02_acdc.ipynb              ACDC from the candidates, validated on held-out pairs -> the circuit
 results/                     outputs of the pilot notebooks
 ```
 
@@ -47,8 +49,8 @@ are produced on Qwen2.5-7B-Instruct.
 |---|---|---|
 | 0 | shared code and checks | done |
 | 1a | head-level attribution, validated against real patching | done |
-| 1b | EAP-IG on edges | in progress |
-| 2 | minimal circuit with ACDC | |
+| 1b | EAP-IG on edges | done |
+| 2 | minimal circuit with ACDC | in progress |
 | 3 | path patching and attention patterns | |
 | 4 | faithfulness, minimality, random circuits, held-out phrase | |
 | 5 | implicit question ("Did the person enjoy their day?") | |
