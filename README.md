@@ -21,12 +21,14 @@ src/                         shared code used by every notebook
   metric.py                  d = logit(Yes) - logit(No); batched scoring; triple accuracy
   hooks.py                   read / replace activations (residual, attention, MLP, per head)
   patching.py                activation patching and the recovery metric R
+  attribution.py             attribution patching for heads and MLPs (gradient estimate of R)
   utils.py                   results on Google Drive; compute-once caching
 notebooks/
   data.ipynb                 builds and describes the dataset           (pilot)
   eval.ipynb                 compares four Qwen models                  (pilot)
   patching_7b.ipynb          activation patching on Qwen2.5-7B          (pilot)
   00_setup_check.ipynb       checks that src/ reproduces the pilot results
+  01a_head_attribution.ipynb attribution for every head/MLP, validated against real patching
 results/                     outputs of the pilot notebooks
 ```
 
@@ -42,7 +44,8 @@ are produced on Qwen2.5-7B-Instruct.
 | phase | task | status |
 |---|---|---|
 | 0 | shared code and checks | done |
-| 1 | head-level attribution, then EAP-IG on edges | |
+| 1a | head-level attribution, validated against real patching | in progress |
+| 1b | EAP-IG on edges | |
 | 2 | minimal circuit with ACDC | |
 | 3 | path patching and attention patterns | |
 | 4 | faithfulness, minimality, random circuits, held-out phrase | |
