@@ -11,7 +11,7 @@ from contextlib import contextmanager
 
 import torch
 
-from .metric import last_logits
+from .metric import final_hidden
 
 KINDS = ("resid", "attn", "mlp", "z")
 
@@ -67,7 +67,7 @@ def hooks(model, specs):
 def run_with_cache(model, ids, kinds=("resid", "attn", "mlp")):
     """Run one sequence and store its activations.
 
-    Returns (logits of the last position [1, vocab], cache) where cache[(kind, l)] is a tensor [seq, dim].
+    Returns (final hidden state at the last position [1, d_model], cache) where cache[(kind, l)] is [seq, dim].
     """
     cache = {}
 
@@ -81,8 +81,8 @@ def run_with_cache(model, ids, kinds=("resid", "attn", "mlp")):
     specs = [(k, l, saver(k, l)) for k in kinds for l in range(n)]
     x = torch.tensor([ids], device=model.device)
     with hooks(model, specs):
-        _, logits = last_logits(model, x)
-    return logits, cache
+        h = final_hidden(model, x)
+    return h, cache
 
 
 def replace_positions(clean, pos_groups):

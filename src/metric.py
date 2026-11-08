@@ -1,4 +1,9 @@
-"""The score d = log P(Yes|yes) - log P(No|no) at the last position."""
+"""The score d = log P(Yes|yes) - log P(No|no) at the last position.
+
+d is computed in float32 from the model's final hidden state, using only the rows of the output
+matrix for the four answer tokens. (Computing it from float16 logits rounds small differences
+away, which matters for activation patching and ACDC.)
+"""
 import numpy as np
 import torch
 
@@ -13,33 +18,43 @@ def yn_ids(tok):
     return Y, N
 
 
+def final_hidden(model, input_ids, **kw):
+    """Final (normalised) hidden state at the last position: [batch, d_model]."""
+    out = model.model(input_ids, **kw)
+    return out.last_hidden_state[:, -1, :]
+
+
+def d_from_hidden(model, h, Y, N):
+    """d for each row of h [batch, d_model], in float32 (differentiable)."""
+    head = model.lm_head
+    W = head.weight[list(Y) + list(N)].float()
+    lg = h.float() @ W.T
+    if getattr(head, "bias", None) is not None:
+        lg = lg + head.bias[list(Y) + list(N)].float()
+    return torch.logsumexp(lg[:, :len(Y)], -1) - torch.logsumexp(lg[:, len(Y):], -1)
+
+
 def d_from_logits(logits, Y, N):
-    """logits: [batch, vocab] at the last position -> d for each row (float32, on CPU)."""
+    """d from full logits [batch, vocab] (kept for compatibility)."""
     lg = logits.float()
     return (torch.logsumexp(lg[:, Y], -1) - torch.logsumexp(lg[:, N], -1)).cpu()
 
 
-def last_logits(model, input_ids, **kw):
-    """Run the model and return (output, logits of the last position). Uses logits_to_keep when available."""
-    try:
-        out = model(input_ids, logits_to_keep=1, **kw)
-    except TypeError:
-        out = model(input_ids, **kw)
-    return out, out.logits[:, -1, :]
-
-
 @torch.no_grad()
+def d_of(model, tok, input_ids, **kw):
+    """d for a batch of token ids (tensor on the model's device). Returns a CPU float tensor."""
+    Y, N = yn_ids(tok)
+    return d_from_hidden(model, final_hidden(model, input_ids, **kw), Y, N).cpu()
+
+
 def d_single(model, tok, ids):
     """d for one list of token ids."""
-    Y, N = yn_ids(tok)
-    x = torch.tensor([ids], device=model.device)
-    return d_from_logits(last_logits(model, x)[1], Y, N)[0].item()
+    return d_of(model, tok, torch.tensor([ids], device=model.device))[0].item()
 
 
 @torch.no_grad()
 def d_batch(model, tok, id_lists, batch_size=16):
     """d for many token-id lists, batched with left padding (same result as d_single)."""
-    Y, N = yn_ids(tok)
     pad = tok.pad_token_id if tok.pad_token_id is not None else tok.eos_token_id
     order = np.argsort([len(x) for x in id_lists])
     out = np.zeros(len(id_lists))
@@ -54,8 +69,7 @@ def d_batch(model, tok, id_lists, batch_size=16):
             mask[b, L - len(seq):] = 1
         ids, mask = ids.to(model.device), mask.to(model.device)
         pos = (mask.cumsum(-1) - 1).clamp(min=0)
-        _, lg = last_logits(model, ids, attention_mask=mask, position_ids=pos)
-        out[idx] = d_from_logits(lg, Y, N).numpy()
+        out[idx] = d_of(model, tok, ids, attention_mask=mask, position_ids=pos).numpy()
     return out
 
 

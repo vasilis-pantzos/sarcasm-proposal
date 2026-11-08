@@ -13,7 +13,7 @@ import numpy as np
 import torch
 
 from .hooks import get_layers, hooks, run_with_cache
-from .metric import d_from_logits, last_logits, yn_ids
+from .metric import d_from_hidden, final_hidden, yn_ids
 from .model import model_info
 from .patching import head_patching, score_pairs
 from .prompts import REGIONS
@@ -39,8 +39,7 @@ def _corrupted_with_grads(model, tok, ids, kinds=("z", "mlp")):
     try:
         with torch.enable_grad(), hooks(model, specs):
             x = torch.tensor([ids], device=model.device)
-            _, logits = last_logits(model, x)
-            d = (torch.logsumexp(logits.float()[:, Y], -1) - torch.logsumexp(logits.float()[:, N], -1))[0]
+            d = d_from_hidden(model, final_hidden(model, x), Y, N)[0]
             d.backward()
     finally:
         h_emb.remove()
