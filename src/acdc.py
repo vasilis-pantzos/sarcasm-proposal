@@ -311,7 +311,7 @@ def acdc_cutoff(ev, start_mask, scores, tau, cap, state_path=None, progress=True
 
     For each receiver (from the answer backwards) the incoming edges are ranked by |score|; we look for the
     smallest k such that keeping only the top-k still satisfies
-        loss(top-k) - loss(current) < tau   and   loss(top-k) <= cap,
+        loss(top-k) - loss(current) <= tau   and   loss(top-k) <= cap,
     by trying k = 0 first and then a binary search on k (about log2(n) tests per receiver). The ranking comes
     from EAP-IG on all discovery pairs, so ACDC only chooses ~one number per receiver instead of thousands of
     edge-by-edge decisions: much less room to overfit the pairs it is tested on.
@@ -352,8 +352,9 @@ def acdc_cutoff(ev, start_mask, scores, tau, cap, state_path=None, progress=True
                 losses[k] = ev.loss(trial_mask(k))
                 st["n_tests"] += 1
             new = losses[k]
-            st["log"].append((g.receivers[v], n, k, cur, new, (new - cur < tau) and (new <= cap)))
-            return (new - cur < tau) and (new <= cap)
+            good = (new - cur <= tau) and (new <= cap)      # <=: with tau = 0, edges that change nothing still go
+            st["log"].append((g.receivers[v], n, k, cur, new, good))
+            return good
 
         if n == 0:
             k = 0

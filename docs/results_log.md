@@ -110,13 +110,35 @@ Changes: 16 + 16 pairs (the 16 pairs of 01b's faithfulness curve), loss = max ov
   by ≈ 0.08, far more than τ = 0.005 per decision; thousands of edge-by-edge decisions fit that noise.
   The partial state is `02_acdc/<model>/v2/acdc_state_tau0.005_n16_per_pair.pt`.
 
-### ACDC v3 (`02c_acdc_v3`) — one cut-off per receiver
+### ACDC v3 (`02c_acdc_v3`) — one cut-off per receiver; stopped after 13 receivers
 
 * Order of the incoming edges of each receiver = |EAP-IG score| (from all discovery pairs). ACDC only decides
   **how many** of the strongest to keep: k = 0 first, then binary search on k (≈ log2(n) tests) → ≈ 57 decisions.
-* All correct discovery pairs except 16 + 16 (monitor) and 24 + 24 (validation), at most 64 per experiment;
-  loss per pair, cap = start + 0.02, τ = 0.005, monitor every 4 receivers.
-* Results: `02_acdc/<model>/v3/`.
+* Pairs: all correct discovery pairs except 16 + 16 (monitor) and 24 + 24 (validation), at most 64 per
+  experiment; loss per pair, cap = start + 0.02, τ = 0.005. A100: ~1 min per receiver.
+* Sanity on the ACDC pairs: candidate mean F 1.053 / 1.044 vs 1.045 / 1.055 in 01b. Start loss 0.247.
+* Kept per receiver (k of n): logits 18/260, m27 15/196, a27 7/129, m26 50/160, a26 19/116, m25 43/141,
+  a25 0/72, m24 0/141, a24 4/66, m23 137/163, a23 7/107, m22 22/176, a22 30/129. Loss 0.247 → 0.270.
+* Monitor (candidate: situation 0.991, phrase 0.927):
+
+| receivers done | situation | phrase |
+|---|---|---|
+| 4 | 0.892 | 0.850 |
+| 8 | 0.748 | 0.851 |
+| 12 | 0.733 | 0.874 |
+
+* Phrase generalises (stable ≈ 0.85-0.87, compare v2: 0.72 → 0.64); situation does not: the big step is when the
+  whole m24 (and a25) is removed, which leaves the loss on the ACDC pairs unchanged (0.257 → 0.258) but drops the
+  monitor 0.89 → 0.75. Likely cause: situation has far fewer correct token-matched pairs than phrase, and 40 of
+  them were set aside for monitor + validation. Stopped.
+
+### ACDC v3b (`02d_acdc_v3b`) — more situation pairs, zero tolerance
+
+* Situation validated on the 28 held-out pairs only (phrase on 24 unused discovery pairs); monitor 8 + 8 pairs;
+  all other correct discovery pairs (≤ 64 per experiment) go to ACDC.
+* Run 1: **τ = 0, cap = start loss** (an edge goes only if the circuit does not get worse); run 2: τ = 0.005,
+  cap = start + 0.02, starting from run 1's circuit.
+* Results: `02_acdc/<model>/v3b/`. Planned final comparison: EAP-IG candidate, ACDC v1, ACDC v3b (both runs).
 
 ## Practical notes
 
