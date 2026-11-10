@@ -68,7 +68,12 @@ class BatchEvaluator:
     product with the dequantized o_proj weight in the model's dtype, accumulated into float32.
     """
 
-    def __init__(self, model, tok, pairs, graph=None):
+    def __init__(self, model, tok, pairs, graph=None, loss="mean"):
+        """loss: "mean"     -> max over experiments of |1 - mean F|            (ACDC v1)
+                 "per_pair" -> max over experiments of mean over pairs |1 - F|  (ACDC v2: a pair that
+                               breaks cannot hide behind a pair that overshoots)"""
+        assert loss in ("mean", "per_pair")
+        self.loss_mode = loss
         self.model, self.tok, self.pairs = model, tok, list(pairs)
         self.g = graph or build_graph(model)
         info = model_info(model)
@@ -155,7 +160,10 @@ class BatchEvaluator:
         return {e: float(F[self.exp == e].mean()) for e in np.unique(self.exp)}
 
     def loss(self, mask):
-        return max(abs(1 - f) for f in self.mean_F(mask).values())
+        F = self.faithfulness(mask)
+        if self.loss_mode == "mean":
+            return max(abs(1 - F[self.exp == e].mean()) for e in np.unique(self.exp))
+        return max(np.abs(1 - F[self.exp == e]).mean() for e in np.unique(self.exp))
 
 
 # ------------------------------------------------------------------ ACDC
@@ -175,19 +183,23 @@ def _sender_layer(g, s):
     return s - g.mlp_row(0) + 0.5
 
 
-def acdc(ev, start_mask, tau, cap, state_path=None, scores=None, progress=True):
+def acdc(ev, start_mask, tau, cap, state_path=None, scores=None, progress=True, monitor=None, monitor_every=4):
     """Hierarchical ACDC. Returns dict(mask, loss, n_tests, log); log rows are
     (receiver, n_edges_tested, loss_before, loss_after, removed).
 
     scores [S, V] (optional, e.g. the EAP-IG scores): the incoming edges of a receiver are ordered by
     |score| before splitting, so the weak edges end up together and go with few tests. Without
-    scores they are ordered by layer. On resume the saved cap is used."""
+    scores they are ordered by layer. On resume the saved cap is used.
+
+    monitor (optional): function mask -> {name: value}, e.g. the mean F on pairs ACDC does not see.
+    It is called every `monitor_every` receivers; the values are printed and kept in the result,
+    so overfitting shows up during the run."""
     g = ev.g
     if state_path and os.path.exists(state_path):
         st = torch.load(state_path, weights_only=False)
         print(f"resuming: {len(st['done'])}/{len(g.receivers)} receivers done, {int(st['mask'].sum())} edges")
     else:
-        st = dict(mask=prune_dangling(start_mask, g), done=[], log=[], n_tests=0, tau=tau, cap=cap)
+        st = dict(mask=prune_dangling(start_mask, g), done=[], log=[], n_tests=0, tau=tau, cap=cap, monitor=[])
     assert st["tau"] == tau, "saved state has a different tau: delete it or change the name"
     cap = st["cap"]
     mask = st["mask"]
@@ -243,10 +255,15 @@ def acdc(ev, start_mask, tau, cap, state_path=None, scores=None, progress=True):
             print(f"  {g.receivers[v]:>6s}: {n_before:5d} -> {int(mask[:, v].sum()):4d} edges in, "
                   f"{st['n_tests'] - tests_before:4d} tests | circuit {int(mask.sum()):5d} edges, "
                   f"loss {cur:.3f} | {(time.time() - t0) / 60:.1f} min")
+        if monitor is not None and len(st["done"]) % monitor_every == 0:
+            vals = monitor(prune_dangling(mask, g))
+            st.setdefault("monitor", []).append((len(st["done"]), int(mask.sum()), vals))
+            save()
+            print("          monitor:", {k: round(float(x), 3) for k, x in vals.items()})
     mask = prune_dangling(mask, g)
     st["mask"] = mask
     save()
-    return dict(mask=mask, loss=ev.loss(mask), n_tests=st["n_tests"], log=st["log"])
+    return dict(mask=mask, loss=ev.loss(mask), n_tests=st["n_tests"], log=st["log"], monitor=st.get("monitor", []))
 
 
 # ------------------------------------------------------------------ evaluation of circuits

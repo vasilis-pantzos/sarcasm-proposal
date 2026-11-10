@@ -32,7 +32,9 @@ notebooks/
   00_setup_check.ipynb       checks that src/ reproduces the pilot results
   01a_head_attribution.ipynb attribution for every head/MLP, validated against real patching
   01b_eap_ig.ipynb           EAP-IG on edges, faithfulness of the top-k edges -> candidates for ACDC
-  02_acdc.ipynb              ACDC from the candidates, validated on held-out pairs -> the circuit
+  02_acdc.ipynb              ACDC v1 (8+8 pairs): overfits, kept for the report
+  02b_acdc_v2.ipynb          ACDC v2 (16+16 pairs, per-pair loss, monitor) -> the circuit
+docs/results_log.md          numbers and findings of every phase, for the final report
 results/                     outputs of the pilot notebooks
 ```
 
