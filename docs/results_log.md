@@ -140,6 +140,56 @@ Changes: 16 + 16 pairs (the 16 pairs of 01b's faithfulness curve), loss = max ov
   cap = start + 0.02, starting from run 1's circuit.
 * Results: `02_acdc/<model>/v3b/`. Planned final comparison: EAP-IG candidate, ACDC v1, ACDC v3b (both runs).
 
+**Run 1 (τ = 0, cap = start loss), L4, 446 tests, 50 min:** 9600 → **7078 edges** (30 % of the graph, 74 % of the
+candidate). Loss on the ACDC pairs 0.241 → **0.198** (never worse; removing edges made pairs *more* faithful).
+
+Monitor (8 + 8 pairs, ±0.1; candidate: situation 0.941, phrase 0.881), every 4 receivers:
+situation 0.805, 0.841, 0.855, 0.879, 0.913, 0.906, 0.913, 0.921, 0.946, 0.966, 1.031, 0.974, 0.984, 0.984;
+phrase 0.791, 0.829, 0.893, 0.931, 0.868, 0.804, 0.808, 0.816, 0.918, 0.894, 0.850, 0.898, 0.854, 0.854.
+→ **no loss of generalisation** (v3: situation 0.73 after 12 receivers).
+
+Kept per receiver (k of n):
+* cut hard: logits 19/260, a27 0/129, a25 0/72, a4 0/44, m22 20/176, a21 21/101, m21 41/173, a22 44/129,
+  m18 77/275, a12 109/221, a5 17/46, m4 49/86, m6 78/121;
+* kept (almost) all: m26 158/160, m23 161/163, m19 248/248, m16 344/344, a17 290/311, a16 282/288, a15 302/305,
+  m14 337/337, a14 281/281, m13 304/304, a13 245/245, layers 7–11 and 0–3 all or nearly all.
+→ With zero tolerance the middle of the network (layers ≈ 7–20) is **dense**: almost every edge contributes a
+little; edges are only removable near the answer (layers 21–27, logits) and in a few early blocks.
+
+**Run 2 (τ = 0.005, cap = start + 0.02, from run 1):** 7078 → ≈ 5100 edges; loss on the ACDC pairs 0.198 → ≈ 0.26
+(at the cap); monitor situation 0.996 → 0.895 (slow decline), phrase 0.80–0.98 (noise).
+
+**Validation** (situation: 28 held-out pairs; phrase: 24 unused discovery pairs; values read from the figure,
+exact table to be added). Final selection: τ = 0, **7078 edges** (30.0 % of the graph, 73.7 % of the candidate);
+target (0.9 ≤ F ≤ 1.2 in both) not reached by any ACDC circuit.
+
+| circuit | edges | situation (held-out) | phrase |
+|---|---|---|---|
+| candidate | 9600 | ≈ 0.92 | ≈ 1.00 |
+| ACDC v1 | 726 | ≈ 0.15 | ≈ 0.50 |
+| ACDC v3b τ = 0 | 7078 | ≈ 0.71 | ≈ 0.89 |
+| EAP-IG top-7078 | 7078 | ≈ 0.71 | ≈ 0.92 |
+| ACDC v3b τ = 0.005 | ≈ 5100 | ≈ 0.70 | ≈ 0.79 |
+| EAP-IG top-5100 | ≈ 5100 | ≈ 0.70 | ≈ 1.14 |
+| random, same size | | ≈ 0 | ≈ 0 |
+
+**Key finding: the held-out split is a test on a NEW PHRASE.** All held-out triples use "Great, just what I
+needed.", which never appears in discovery (discovery: 4 phrases, 46 triples each). For situation:
+monitor (discovery pairs, known phrases) ≈ 0.98 at the end of run 1, held-out (new phrase) ≈ 0.71, while the
+candidate gives ≈ 0.94 / 0.92. → Pruned circuits generalise to new *situations* with the known phrases, but lose
+part of the generalisation to a new *phrase*. (In v1 both were 0.15: there the circuit failed everywhere.)
+
+Other conclusions: at small sizes ACDC ≫ EAP-IG top-k (connected paths); at large sizes (5000–7000 edges) top-k
+is already connected and ACDC adds nothing. No circuit smaller than the candidate keeps F ≥ 0.9 in both
+experiments: the mechanism is distributed (dense core in layers ≈ 7–20; few paths near the answer).
+
+## Phase 2e · circuits answering alone (`02e_compare_circuits`)
+
+Every model on all 690 prompts, with edge-level **mean ablation** (edges outside the circuit get the dataset mean,
+per position, over prompts of the same length): full model, candidate, ACDC v1, v3b τ = 0, v3b τ = 0.005,
+random (size of v3b τ = 0), no edges. Measures per split: Yes rate per condition, accuracy, triple accuracy,
+agreement with the full model, correlation of d. Results: `02e_compare_circuits/<model>/`.
+
 ## Practical notes
 
 * Free Colab: a session stops after inactivity or a maximum duration, and after heavy use no T4 may be available

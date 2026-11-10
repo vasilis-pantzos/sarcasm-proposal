@@ -24,6 +24,7 @@ src/                         shared code used by every notebook
   attribution.py             attribution patching for heads and MLPs (gradient estimate of R)
   eap.py                     EAP-IG edge scores, edge patching, faithfulness of circuits
   acdc.py                    batched edge patching and hierarchical ACDC (minimal circuit)
+  standalone.py              a circuit answering single prompts on its own (edge-level mean ablation)
   utils.py                   results on Google Drive; compute-once caching
 notebooks/
   data.ipynb                 builds and describes the dataset           (pilot)
@@ -36,6 +37,7 @@ notebooks/
   02b_acdc_v2.ipynb          ACDC v2 (16+16 pairs, per-pair loss, monitor): still overfits, stopped
   02c_acdc_v3.ipynb          ACDC v3: one cut-off per receiver (EAP-IG order): situation still overfits, stopped
   02d_acdc_v3b.ipynb         ACDC v3b: more situation pairs, zero tolerance, then tau = 0.005 -> the circuit
+  02e_compare_circuits.ipynb every circuit answers alone (mean ablation) on all 690 prompts vs the full model
 docs/results_log.md          numbers and findings of every phase, for the final report
 results/                     outputs of the pilot notebooks
 ```
