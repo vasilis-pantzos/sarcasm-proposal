@@ -94,12 +94,29 @@ Settings: 8 + 8 pairs, loss = max over experiments |1 − mean F|, τ = 0.01, ca
   ones); (3) a loss on the mean lets broken pairs be compensated by overshooting ones; (4) the minimal circuit that
   generalises lies between 726 and 9600 edges.
 
-### ACDC v2 (`02b_acdc_v2`) — in progress
+### ACDC v2 (`02b_acdc_v2`) — stopped early, overfits too
 
 Changes: 16 + 16 pairs (the 16 pairs of 01b's faithfulness curve), loss = max over experiments of mean |1 − F_i|
 (per pair), cap = start loss + 0.02, τ = 0.005, monitor = mean F on 16 + 16 other pairs every 4 receivers
-(not used for decisions). Validation on the same kind of unseen pairs as v1, with v1 re-evaluated on them.
-Results: `02_acdc/<model>/v2/`.
+(not used for decisions). Ran on an A100: 1.8 s per test with 32 pairs (T4 with 16 pairs: ~7 s).
+
+* Sanity: candidate mean F on the 16 + 16 pairs 1.048 / 1.031 vs 1.045 / 1.055 in 01b (T4); per pair up to 0.3
+  apart (other GPU, other batch) → the check compares means with tolerance 0.05.
+* Start loss (per pair) 0.333, cap 0.36. Candidate on the monitor pairs: situation 1.006, phrase 0.946.
+* After 8 receivers (logits → a24; logits 260 → 12 edges, m27 → 2, m26 → 4, m24 → 2):
+  loss on its own pairs 0.333 → 0.315 (flat or better), but **monitor F 0.836 / 0.717 (4 receivers) →
+  0.770 / 0.642 (8 receivers)**. Stopped.
+* Why: per-pair F is noisy (≈ 0.3 even for the candidate) → with 16 pairs per experiment the loss is uncertain
+  by ≈ 0.08, far more than τ = 0.005 per decision; thousands of edge-by-edge decisions fit that noise.
+  The partial state is `02_acdc/<model>/v2/acdc_state_tau0.005_n16_per_pair.pt`.
+
+### ACDC v3 (`02c_acdc_v3`) — one cut-off per receiver
+
+* Order of the incoming edges of each receiver = |EAP-IG score| (from all discovery pairs). ACDC only decides
+  **how many** of the strongest to keep: k = 0 first, then binary search on k (≈ log2(n) tests) → ≈ 57 decisions.
+* All correct discovery pairs except 16 + 16 (monitor) and 24 + 24 (validation), at most 64 per experiment;
+  loss per pair, cap = start + 0.02, τ = 0.005, monitor every 4 receivers.
+* Results: `02_acdc/<model>/v3/`.
 
 ## Practical notes
 

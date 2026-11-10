@@ -278,3 +278,110 @@ def faithfulness_many(model, tok, pairs, masks, graph=None, batch=16):
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
     return {k: np.concatenate(v) for k, v in out.items()}
+
+
+# ------------------------------------------------------------------ ACDC v3: one cut-off per receiver
+class MultiEvaluator:
+    """Several BatchEvaluators (one per chunk of pairs) behind the same interface: many pairs per test."""
+
+    def __init__(self, model, tok, pairs, graph=None, loss="per_pair", batch=32):
+        self.g = graph or build_graph(model)
+        self.evs = [BatchEvaluator(model, tok, pairs[i:i + batch], self.g, loss=loss) for i in range(0, len(pairs), batch)]
+        self.exp = np.concatenate([e.exp for e in self.evs])
+        self.loss_mode = loss
+        self.d_clean = np.concatenate([e.d_clean for e in self.evs])
+        self.d_corr = np.concatenate([e.d_corr for e in self.evs])
+
+    def faithfulness(self, mask):
+        return np.concatenate([e.faithfulness(mask) for e in self.evs])
+
+    def mean_F(self, mask):
+        F = self.faithfulness(mask)
+        return {e: float(F[self.exp == e].mean()) for e in np.unique(self.exp)}
+
+    def loss(self, mask):
+        F = self.faithfulness(mask)
+        if self.loss_mode == "mean":
+            return max(abs(1 - F[self.exp == e].mean()) for e in np.unique(self.exp))
+        return max(np.abs(1 - F[self.exp == e]).mean() for e in np.unique(self.exp))
+
+
+def acdc_cutoff(ev, start_mask, scores, tau, cap, state_path=None, progress=True, monitor=None, monitor_every=4):
+    """ACDC with ONE decision per receiver: how many of its strongest incoming edges (by |EAP-IG score|) to keep.
+
+    For each receiver (from the answer backwards) the incoming edges are ranked by |score|; we look for the
+    smallest k such that keeping only the top-k still satisfies
+        loss(top-k) - loss(current) < tau   and   loss(top-k) <= cap,
+    by trying k = 0 first and then a binary search on k (about log2(n) tests per receiver). The ranking comes
+    from EAP-IG on all discovery pairs, so ACDC only chooses ~one number per receiver instead of thousands of
+    edge-by-edge decisions: much less room to overfit the pairs it is tested on.
+    """
+    g = ev.g
+    if state_path and os.path.exists(state_path):
+        st = torch.load(state_path, weights_only=False)
+        print(f"resuming: {len(st['done'])}/{len(g.receivers)} receivers done, {int(st['mask'].sum())} edges")
+    else:
+        st = dict(mask=prune_dangling(start_mask, g), done=[], log=[], n_tests=0, tau=tau, cap=cap, monitor=[], kept={})
+    assert st["tau"] == tau, "saved state has a different tau: delete it or change the name"
+    cap = st["cap"]
+    mask = st["mask"]
+    cur = ev.loss(mask)
+    t0 = time.time()
+
+    def save():
+        if state_path:
+            st["mask"] = mask
+            torch.save(st, state_path)
+
+    for v in receiver_order(g):
+        if v in st["done"]:
+            continue
+        tests_before = st["n_tests"]
+        mask = prune_dangling(mask, g)
+        edges = sorted(np.flatnonzero(mask[:, v]), key=lambda s: -abs(scores[s, v]))    # strongest first
+        n = len(edges)
+        losses = {n: cur}
+
+        def trial_mask(k):
+            m = mask.copy()
+            m[edges[k:], v] = False
+            return m
+
+        def ok(k):
+            if k not in losses:
+                losses[k] = ev.loss(trial_mask(k))
+                st["n_tests"] += 1
+            new = losses[k]
+            st["log"].append((g.receivers[v], n, k, cur, new, (new - cur < tau) and (new <= cap)))
+            return (new - cur < tau) and (new <= cap)
+
+        if n == 0:
+            k = 0
+        elif ok(0):
+            k = 0
+        else:
+            lo, hi = 0, n                     # ok(hi) is true (the current circuit), ok(lo) is false
+            while hi - lo > 1:
+                mid = (lo + hi) // 2
+                if ok(mid):
+                    hi = mid
+                else:
+                    lo = mid
+            k = hi
+        mask = trial_mask(k)
+        cur = losses[k]
+        st["kept"][g.receivers[v]] = (k, n)
+        st["done"].append(v)
+        save()
+        if progress:
+            print(f"  {g.receivers[v]:>6s}: keep {k:4d} of {n:4d} incoming edges, {st['n_tests'] - tests_before:3d} tests | "
+                  f"circuit {int(prune_dangling(mask, g).sum()):5d} edges, loss {cur:.3f} | {(time.time() - t0) / 60:.1f} min")
+        if monitor is not None and len(st["done"]) % monitor_every == 0:
+            vals = monitor(prune_dangling(mask, g))
+            st["monitor"].append((len(st["done"]), int(prune_dangling(mask, g).sum()), vals))
+            save()
+            print("          monitor:", {kk: round(float(x), 3) for kk, x in vals.items()})
+    mask = prune_dangling(mask, g)
+    st["mask"] = mask
+    save()
+    return dict(mask=mask, loss=ev.loss(mask), n_tests=st["n_tests"], log=st["log"], monitor=st["monitor"], kept=st["kept"])
