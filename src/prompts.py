@@ -7,6 +7,14 @@ import pandas as pd
 REGIONS = ["situation", "phrase", "question", "final"]
 QUESTION_END = "Answer with Yes or No."
 DATA_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "sarcasm_dataset.csv")
+# dataset versions: v1 = the pilot dataset (5 phrases, 1 sentence frame); v2 = data/make_dataset_v2.py
+DATASETS = {"v1": DATA_PATH,
+            "v2": os.path.join(os.path.dirname(DATA_PATH), "sarcasm_dataset_v2.csv")}
+
+
+def data_tag(version):
+    """Suffix for result folders: '' for v1 (keeps the old paths), '_data-v2' etc. otherwise."""
+    return "" if version == "v1" else f"_data-{version}"
 
 # experiment name -> (condition of the corrupted sentence, region that differs, token-matched column)
 EXPERIMENTS = {
@@ -16,7 +24,11 @@ EXPERIMENTS = {
 
 
 def load_dataset(path=DATA_PATH):
-    df = pd.read_csv(path)
+    """path: a CSV path or a dataset version ("v1", "v2")."""
+    df = pd.read_csv(DATASETS.get(path, path))
+    if "heldout_type" not in df.columns:            # v1: the only held-out kind is a new phrase
+        df["heldout_type"] = ["phrase" if s == "heldout" else "" for s in df.split]
+    df["heldout_type"] = df["heldout_type"].fillna("")
     need = {"triple_id", "condition", "text", "prompt", "situation", "frame", "split",
             "token_matched_PS", "token_matched_SN"}
     missing = need - set(df.columns)

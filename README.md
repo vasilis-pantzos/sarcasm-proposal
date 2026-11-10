@@ -14,7 +14,9 @@ We look for the components of Qwen2.5-7B-Instruct that detect one well-defined t
 ## Repository
 
 ```
-data/sarcasm_dataset.csv     230 triples (690 sentences), discovery / held-out split
+data/sarcasm_dataset.csv     v1: 230 triples (690 sentences), 5 phrases, 1 sentence frame
+data/sarcasm_dataset_v2.csv  v2: 910 triples (2730 sentences), 24 phrases, 5 sentence frames, all token-matched
+data/make_dataset_v2.py      builds v2 (held-out: 6 phrases + 1 sentence frame never seen in discovery)
 src/                         shared code used by every notebook
   model.py                   load Qwen2.5-3B (development) or 7B (final, 4-bit)
   prompts.py                 dataset rows -> token ids + regions; clean/corrupted pairs
@@ -28,6 +30,7 @@ src/                         shared code used by every notebook
   utils.py                   results on Google Drive; compute-once caching
 notebooks/
   data.ipynb                 builds and describes the dataset           (pilot)
+  data_v2.ipynb              builds and describes dataset v2 (no GPU)
   eval.ipynb                 compares four Qwen models                  (pilot)
   patching_7b.ipynb          activation patching on Qwen2.5-7B          (pilot)
   00_setup_check.ipynb       checks that src/ reproduces the pilot results
@@ -48,6 +51,9 @@ Open a notebook in Google Colab with a **T4 GPU**. The first cell clones this re
 imports `src/`; results are saved to Google Drive (`MyDrive/sarcasm/results`), so an interrupted
 run continues where it stopped. New code is developed on Qwen2.5-3B-Instruct and the final results
 are produced on Qwen2.5-7B-Instruct.
+
+Notebooks 01b, 02d and 02e have a setting `DATA = "v1"` / `"v2"`; with v2 the results go to separate folders
+(`..._data-v2`), so the v1 results are kept. 02e also has `CIRCUITS_FROM` (test v1 circuits on v2 data).
 
 ## Work plan
 

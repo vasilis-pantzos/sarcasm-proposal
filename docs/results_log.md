@@ -190,6 +190,27 @@ per position, over prompts of the same length): full model, candidate, ACDC v1, 
 random (size of v3b τ = 0), no edges. Measures per split: Yes rate per condition, accuracy, triple accuracy,
 agreement with the full model, correlation of d. Results: `02e_compare_circuits/<model>/`.
 
+## Dataset v2 (`data/make_dataset_v2.py`, `notebooks/data_v2.ipynb`)
+
+Why: the circuits found on v1 generalise to new situations with the known phrases, partly to the new phrase, and
+poorly to free text (own sentences: e.g. "My house burned down. This is the happiest day of my life": full model
+Yes, d moves +5.8 from the average prompt; v3b circuits 8 %, −3 %, −41 % of that move). v1 has 5 phrases and a
+single sentence frame ("Today was all about {s}. {f}").
+
+| | v1 | v2 |
+|---|---|---|
+| situation pairs | 46 | 70 (24 new; 29 reworded so that both versions have the same tokens) |
+| positive phrases | 5 (1 held out) | 24 (6 held out), each with token-matched negative versions |
+| sentence frames | 1 | 5 (1 held out: "Guess what my evening looked like: {s}. {f}") |
+| triples | 230 | 910: 630 discovery, 210 held-out phrase, 70 held-out frame |
+| token-matched (P–S / S–N) | 116 / 184 of 230; held-out phrase: 0 S–N | **all 910 / 910** |
+
+Prompt length 56–67 tokens. The tokenizer used to design it (qwen.tiktoken) reproduces v1 exactly (all 690 lengths,
+all 230 + 230 token-matched flags).
+
+Plan: (1) full model + v1 circuits on v2 (02e, `DATA = "v2"`, `CIRCUITS_FROM = "v1"`); (2) EAP-IG (01b) and ACDC v3b
+(02d) on v2; (3) 02e with the v2 circuits.
+
 ## Practical notes
 
 * Free Colab: a session stops after inactivity or a maximum duration, and after heavy use no T4 may be available
