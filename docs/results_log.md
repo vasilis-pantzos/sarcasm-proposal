@@ -354,6 +354,45 @@ components (v1 had removed a4 entirely, so its layer-4 heads were dangling).
 most (87 % of the top-100). v2 adds edges mainly in the later layers, consistent with its better transfer of the
 phrase swap to new phrases and frames.
 
+## Phase 3a · sarcasm direction (`03a_sarcasm_direction`, DATA = v2, full model)
+
+Residual stream at the last token, all layers, 2730 prompts (+ 910 for the fourth condition Q).
+
+**Probes per layer** (L2 logistic regression, trained on discovery; held-out balanced accuracy):
+* phrase polarity ≈ 1.0 from layer 1; situation valence high early (dips on the new frame in layers 6–12);
+* **sarcasm generalises to new phrases / the new frame only from layer ≈ 14–19**: best layer **19**
+  (held-out phrase 0.963, held-out frame 0.989). (Discovery = training data, ≈ 1.0 everywhere: not informative.)
+
+**More than sentiment? — 2 × 2 design.** With only P, S, N the sarcasm mean-difference is algebraically a combination
+of the phrase and situation mean-differences (checked: residual 1e-8), so "remove the sentiment directions" gives
+chance by construction; this first version of the test was dropped. Adding **Q = pleasant situation + negative
+phrase** (P's sentence with N's phrase):
+* the full model answers **Yes on Q** in 53 % (discovery), 72 % (new phrases), 86 % (new frame) of prompts;
+* interaction ι = (S − N) − (P − Q) relative to the main effects |ι| / (|φ| + |σ|): ≈ 0 up to layer 10, rising, then a
+  **jump at layers 17–21 to ≈ 2** (1.42 at layer 19);
+* cos(ι on discovery, ι on held-out): ≈ 0.85 by layer 9, **0.97–0.99 from layer 14** (new phrases and new frame);
+* probe S vs (P, N, Q) after removing the phrase and situation directions: ≈ 0.6 (layer 19: 0.625 / 0.593 / 0.486):
+  the interaction is shared by S and Q, so it does not single out S.
+
+→ The model computes a **situation–phrase incongruity** signal (a non-additive interaction), general across phrases
+and frames, appearing at layers ≈ 17–21, and it treats incongruity in either direction as "sarcastic".
+
+**Steering** (add α · (mean S − mean P/N) at the last token, held-out prompts; Yes rates read from the figure):
+layers 6–16: no effect; 18: small; **20–24: full control** — P 0.15 → ≈ 0.5–0.9 (α = 1) → ≈ 1.0 (α = 2);
+N 0.5 → 0.9–1.0; S 0.86 → 0.35–0.5 (α = −1) → 0 (α = −2). Random direction of the same norm (layer 19): little effect.
+(The full model says Yes on ≈ 50 % of held-out N.)
+
+**Who writes the direction (read at layer 19; share of the S − P/N gap):** m18 **0.611**, a18.h15 0.114, a18.h18 0.071,
+a18.h4 0.035, m17 0.027, a18.h13 0.026, a18.h16 0.024, a18.h20 0.017, a17.h1 0.014, a18.h21 0.013 (≈ 95 % together);
+then small contributions from layers 15–18 (a18.h17 −0.012, a18.h19 −0.007, a18.h7 −0.006 push the other way).
+**All 25 top writers are in both ACDC circuits (v1 and v2)**, and the five layer-18 heads found by EAP-IG in Phase 1b
+(h4, h13, h15, h18, h21) are all in the top 10. Sanity: embedding + heads + MLPs = residual stream (exact).
+
+**Convergence of methods on layers ≈ 17–20:** EAP-IG (heads layer 18 → m18), ACDC (dense core 14–20), generalising
+probe (from 14–19), incongruity interaction (jump 17–21), writers (m18 + layer-18 heads ≈ 95 %), steering (from 20).
+The final computation is *localised* (m18 and a few layer-18 heads write the decision), while the inputs (the two
+sentiments) are computed in many places earlier, which is why edge-level circuits are large.
+
 ## Practical notes
 
 * Free Colab: a session stops after inactivity or a maximum duration, and after heavy use no T4 may be available
