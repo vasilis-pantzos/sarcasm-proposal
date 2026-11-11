@@ -337,6 +337,23 @@ Faithfulness with corrupted partners (32 pairs per cell; v1 circuits → v2 circ
    circuit that answers like the model on its own. Faithfulness alone grows with circuit size: the mechanism is
    **distributed**, and this is a property of the model, not of the dataset.
 
+### Overlap of the v1 and v2 circuits (edges)
+
+| circuit | edges v1 | edges v2 | shared | Jaccard | share of the smaller | random expected | shared / random |
+|---|---|---|---|---|---|---|---|
+| EAP-IG candidate | 9600 | 9600 | 7919 | 0.702 | 0.825 | 3909 | 2.03 |
+| ACDC v3b τ=0 | 7078 | 8147 | 5549 | 0.573 | 0.784 | 2446 | 2.27 |
+| ACDC v3b τ=0.005 | 5062 | 5722 | 3805 | 0.545 | 0.752 | 1229 | 3.10 |
+
+EAP-IG edge scores v1 vs v2: Spearman **0.868**; top-100 edges 87 % shared, top-500 79 %, top-2000 78 %
+(random: 0.4 %, 2.1 %, 8.5 %). Per sender layer (ACDC τ=0, `circuits_v1_vs_v2_per_layer.png`): same profile
+(most edges from layers 1–12, decreasing to the answer); v2 keeps **more edges from layers 14–27** and the layer-4
+components (v1 had removed a4 entirely, so its layer-4 heads were dangling).
+
+→ **The same mechanism**: ≈ 75–83 % of each circuit is shared, 2–3 × above chance, and the strongest edges agree
+most (87 % of the top-100). v2 adds edges mainly in the later layers, consistent with its better transfer of the
+phrase swap to new phrases and frames.
+
 ## Practical notes
 
 * Free Colab: a session stops after inactivity or a maximum duration, and after heavy use no T4 may be available

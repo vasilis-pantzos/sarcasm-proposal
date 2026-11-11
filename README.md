@@ -27,6 +27,7 @@ src/                         shared code used by every notebook
   eap.py                     EAP-IG edge scores, edge patching, faithfulness of circuits
   acdc.py                    batched edge patching and hierarchical ACDC (minimal circuit)
   standalone.py              a circuit answering single prompts on its own (edge-level mean ablation)
+  direction.py               residual stream per layer, probes, steering, components writing a direction
   utils.py                   results on Google Drive; compute-once caching
 notebooks/
   data.ipynb                 builds and describes the dataset           (pilot)
@@ -40,7 +41,8 @@ notebooks/
   02b_acdc_v2.ipynb          ACDC v2 (16+16 pairs, per-pair loss, monitor): still overfits, stopped
   02c_acdc_v3.ipynb          ACDC v3: one cut-off per receiver (EAP-IG order): situation still overfits, stopped
   02d_acdc_v3b.ipynb         ACDC v3b: more situation pairs, zero tolerance, then tau = 0.005 -> the circuit
-  02e_compare_circuits.ipynb every circuit answers alone (mean ablation) on all 690 prompts vs the full model
+  02e_compare_circuits.ipynb every circuit answers alone (mean ablation) on all prompts vs the full model
+  03a_sarcasm_direction.ipynb probes per layer, sentiment controls, steering, who writes the direction, own sentences
 docs/results_log.md          numbers and findings of every phase, for the final report
 results/                     outputs of the pilot notebooks
 ```
@@ -62,8 +64,8 @@ Notebooks 01b, 02d and 02e have a setting `DATA = "v1"` / `"v2"`; with v2 the re
 | 0 | shared code and checks | done |
 | 1a | head-level attribution, validated against real patching | done |
 | 1b | EAP-IG on edges | done |
-| 2 | minimal circuit with ACDC | in progress |
-| 3 | path patching and attention patterns | |
+| 2 | minimal circuit with ACDC (+ dataset v2) | done |
+| 3 | what the model represents: sarcasm direction (3a), information flow (3b), path patching (3c) | in progress |
 | 4 | faithfulness, minimality, random circuits, held-out phrase | |
 | 5 | implicit question ("Did the person enjoy their day?") | |
 | 6 | iSarcasmEval | |
