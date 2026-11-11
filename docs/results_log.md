@@ -211,6 +211,132 @@ all 230 + 230 token-matched flags).
 Plan: (1) full model + v1 circuits on v2 (02e, `DATA = "v2"`, `CIRCUITS_FROM = "v1"`); (2) EAP-IG (01b) and ACDC v3b
 (02d) on v2; (3) 02e with the v2 circuits.
 
+### Step 1: the v1 circuits on v2 (`02e`, DATA = v2, CIRCUITS_FROM = v1)
+
+2730 prompts; groups: discovery (1890), held-out phrase (630), held-out frame (210). For the v1 circuits all of v2
+is new except the 4 discovery phrases and the v1 sentence frame. (Triple accuracy / agreement read from the figure.)
+
+| | triple acc. disc / phrase / frame | agreement disc / phrase / frame | F alone (slope) disc / frame / phrase | bal. acc. (d>0) disc / phrase / frame |
+|---|---|---|---|---|
+| full model | 0.81 / 0.79 / 0.84 | 1 | 1 | 0.783 / 0.737 / 0.814 |
+| EAP-IG candidate (9600) | 0.78 / 0.77 / 0.84 | 0.90 / 0.90 / 0.78 | 0.818 / 0.698 / 0.813 | 0.752 / 0.711 / 0.704 |
+| ACDC v3b τ=0 (7078) | 0.78 / 0.87 / 0.86 | 0.87 / 0.86 / 0.74 | 0.683 / 0.535 / 0.608 | 0.737 / 0.690 / 0.714 |
+| ACDC v3b τ=0.005 (≈5100) | 0.78 / 0.79 / 0.81 | 0.83 / 0.81 / 0.76 | 0.497 / 0.412 / 0.384 | 0.729 / 0.677 / 0.775 |
+| ACDC v1 (726) | 0.59 / 0.49 / 0.49 | 0.47 / 0.62 / 0.45 | −0.008 / −0.079 / 0.128 | 0.565 / 0.538 / 0.529 |
+| random (7078) | 0.33 / 0.22 / 0.34 | 0.61 / 0.56 / 0.47 | 0.016 / 0.067 / −0.054 | 0.500 / 0.500 / 0.500 |
+| no edges | 0 / 0 / 0.02 | 0.53 / 0.60 / 0.43 (baseline) | – | 0.500 |
+
+Median F alone (disc / frame / phrase): EAP-IG 0.848 / 0.736 / 0.842; v3b τ=0 0.755 / 0.584 / 0.644;
+τ=0.005 0.591 / 0.432 / 0.408; v1 −0.189 / −0.196 / 0.177; random 0.217 / 0.252 / −0.117.
+Own thresholds (calibrated on v2 discovery) change balanced accuracy by ≤ 0.07.
+
+* The full model is slightly worse on v2 (triple accuracy 0.79–0.84 vs 0.85 on v1) but still good.
+* **The ranking generalises**: circuits found with 4 phrases and 1 frame keep the full model's triple accuracy on
+  20 new phrases and 4 new frames (EAP-IG, v3b τ=0 and τ=0.005: 0.77–0.87).
+* **The size of the effect does not fully**: F alone drops from 0.91 / 0.78 / 0.65 (v1 data) to 0.82 / 0.68 / 0.50
+  (v2 discovery) and further on the new frame (0.70 / 0.54 / 0.41); agreement drops most on the new frame
+  (0.74–0.78). The sentence frame (syntax) hurts more than a new phrase.
+* v1 ACDC (726) ≈ random in F alone; random and no-edges behave as expected.
+
+Faithfulness with corrupted partners (pairs; 32 correct token-matched pairs per cell; columns in the order of the
+circuits; first time with token-matched **phrase** pairs on held-out phrases):
+
+| group | experiment | EAP-IG (9600) | ACDC v1 (726) | v3b τ=0 (7078) | v3b τ=0.005 | random |
+|---|---|---|---|---|---|---|
+| discovery | situation | 1.001 | 0.268 | 0.799 | 0.690 | 0.001 |
+| discovery | phrase | 0.823 | 0.484 | 1.024 | 1.052 | 0.009 |
+| held-out phrase | situation | 0.912 | 0.193 | 0.781 | 0.625 | −0.000 |
+| held-out phrase | phrase | 0.740 | 0.276 | 0.743 | 0.716 | −0.002 |
+| held-out frame | situation | 1.078 | 0.165 | 0.846 | 0.715 | −0.002 |
+| held-out frame | phrase | 0.803 | 0.343 | 0.760 | 0.711 | 0.002 |
+
+* With the measure used to find them (patching from the partner), the v1 circuits stay faithful on v2: situation
+  0.78–1.08 for EAP-IG and v3b τ=0, even with the new frame. The **phrase swap on new phrases** is the weak spot
+  (≈ 0.72–0.74 for all three large circuits). v1 ACDC (726) 0.17–0.48, random 0.
+* Pair faithfulness is higher than F alone (mean ablation): answering alone is the harder test.
+
+### Step 2: new circuits on v2
+
+**EAP-IG (01b, DATA = v2):** 200 correct discovery pairs per experiment (seeded shuffle, so they cover all situation
+pairs, phrases and frames). Faithfulness of top-k (16 pairs, read from the figure): situation 1600: 0.27, 3200: 0.78,
+6400–12800: ≈ 0.90; phrase 800: 0.47, 1600: 1.06, 3200: 1.43, 6400: **1.72** (CI up to 2.3), 9600: 1.13, 12800: 1.29.
+The phrase swap **overshoots** strongly (some phrase pairs have small margins d(S) − d(N) ≈ 1, so F is unstable).
+The old rule "smallest k with F ≥ 0.9" picked 6400; with the new rule (0.9 ≤ F ≤ 1.2, else closest to 1) the
+candidate is **9600 edges**, as on v1 (k comes from a fixed grid, so the same size is expected; the edges differ).
+
+**ACDC v3b (02d, DATA = v2), L4:** ACDC pairs: all correct discovery pairs (shuffled) except monitor (8 + 8) and
+validation, ≤ 64 per experiment → 128 pairs, 8.3 s per test. Start loss (per pair) 0.228; mean F of the candidate on the
+ACDC pairs: situation 0.858, phrase 1.065. Sanity: all / no edges exact; "same F as 01b" not comparable (01b and 02d
+kept different correct pairs on different GPUs → different shuffled 16; per-pair noise up to 1.2 on phrase pairs).
+
+Final circuit: **τ = 0, 8147 edges** (34.6 % of the graph, 84.9 % of the candidate). Validation (situation: 64 held-out
+pairs, new phrases + new frame; phrase: 64 held-out + 24 unused discovery; read from the figure):
+
+| circuit | edges | situation | phrase |
+|---|---|---|---|
+| candidate | 9600 | ≈ 0.86 | ≈ 1.07 |
+| **ACDC v3b τ = 0** | **8147** | **≈ 0.81** | **≈ 0.99** |
+| EAP-IG top-8147 | 8147 | ≈ 0.76 | ≈ 1.05 |
+| ACDC v3b τ = 0.005 | ≈ 5700 | ≈ 0.75 | ≈ 0.84 |
+| EAP-IG top-5700 | ≈ 5700 | ≈ 0.74 | ≈ 1.07 |
+| random | | ≈ 0 | ≈ 0 |
+
+* Compared with v1 (τ = 0: 7078 edges, situation 0.71 on one new phrase, phrase 0.89 on known phrases only), the v2
+  circuit is more faithful on harder held-out data (new phrases **and** a new frame; phrase now tested on new phrases).
+* On v2 **ACDC beats EAP-IG at the same size** (situation 0.81 vs 0.76; phrase 0.99 vs an overshooting 1.05); on v1
+  they were equal at these sizes. The variety of v2 lets ACDC keep the right edges.
+* Slightly larger than the v1 circuit (8147 vs 7078): covering 18 phrases and 4 frames needs more of the mechanism.
+* No circuit reaches 0.9 on the situation swap with new phrases / frames (candidate 0.86).
+
+### Step 3: the v2 circuits on v2 (`02e`, DATA = v2, CIRCUITS_FROM = v2) and the comparison with the v1 circuits
+
+Same prompts and pairs as step 1, so the two sets of circuits are compared on identical data
+(v1 circuits → v2 circuits; read from the figures where marked ≈).
+
+Triple accuracy (disc / new phrase / new frame; ≈): EAP-IG 0.78 / 0.77 / 0.84 → 0.79 / 0.88 / 0.77;
+ACDC τ=0 0.78 / 0.87 / 0.86 → 0.77 / 0.83 / 0.67; τ=0.005 0.78 / 0.79 / 0.81 → 0.72 / 0.75 / 0.58.
+Agreement with full (≈): EAP-IG 0.90 / 0.90 / 0.78 → 0.88 / 0.89 / 0.77; τ=0 0.87 / 0.86 / 0.74 → 0.88 / 0.87 / 0.78;
+τ=0.005 0.83 / 0.81 / 0.76 → 0.85 / 0.85 / 0.69.
+
+F alone (slope; disc / new frame / new phrase):
+
+| circuit | edges v1 → v2 | v1 circuits | v2 circuits |
+|---|---|---|---|
+| EAP-IG candidate | 9600 → 9600 | 0.818 / 0.698 / 0.813 | 0.760 / 0.611 / 0.707 |
+| ACDC v3b τ=0 | 7078 → 8147 | 0.683 / 0.535 / 0.608 | 0.735 / 0.565 / 0.679 |
+| ACDC v3b τ=0.005 | ≈5100 → ≈5700 | 0.497 / 0.412 / 0.384 | 0.610 / 0.478 / 0.568 |
+| random | | ≈ 0 | 0.014 / 0.054 / −0.047 |
+
+(v2 medians: τ=0 0.770 / 0.694 / 0.670; τ=0.005 0.658 / 0.450 / 0.586; EAP-IG 0.796 / 0.765 / 0.685.)
+Balanced accuracy, d > 0 (disc / new phrase / new frame), v2 circuits: EAP-IG 0.727 / 0.696 / 0.675; τ=0 0.729 /
+0.675 / 0.671; τ=0.005 0.722 / 0.686 / 0.625 (v1 circuits: 0.752 / 0.711 / 0.704; 0.737 / 0.690 / 0.714; 0.729 / 0.677
+/ 0.775). Own thresholds change ≤ 0.07.
+
+Faithfulness with corrupted partners (32 pairs per cell; v1 circuits → v2 circuits):
+
+| group | experiment | EAP-IG | ACDC τ=0 | ACDC τ=0.005 | random (v2) |
+|---|---|---|---|---|---|
+| discovery | situation | 1.001 → 0.827 | 0.799 → 0.790 | 0.690 → 0.708 | −0.002 |
+| discovery | phrase | 0.823 → 1.244 | 1.024 → 1.219 | 1.052 → 1.099 | 0.006 |
+| held-out phrase | situation | 0.912 → 0.879 | 0.781 → 0.778 | 0.625 → 0.695 | 0.001 |
+| held-out phrase | **phrase** | **0.740 → 1.133** | **0.743 → 1.037** | 0.716 → 0.766 | 0.003 |
+| held-out frame | situation | 1.078 → 0.945 | 0.846 → 0.869 | 0.715 → 0.873 | −0.000 |
+| held-out frame | **phrase** | **0.803 → 0.984** | **0.760 → 0.939** | 0.711 → 0.762 | 0.002 |
+
+**Conclusions of the v1 / v2 comparison**
+1. The specific weak spot of the v1 circuits, the **phrase swap on new phrases / a new frame** (≈ 0.74–0.80), is
+   fixed by the v2 circuits under pair patching (ACDC τ=0: 1.04 on new phrases, 0.94 on the new frame). Learning
+   from 18 phrases and 4 frames captures how the model reads the *phrase* in general. (Discovery phrase pairs now
+   overshoot, 1.1–1.24: v2's phrase pairs include small-margin pairs, where F is unstable.)
+2. When a circuit answers **alone** (mean ablation), the v2 data do not help beyond size: ACDC v2 circuits are a bit
+   better but also bigger; the v2 EAP-IG candidate (same 9600 edges) is *worse* than v1's. Ordered by size, F alone
+   follows the number of edges (≈5100: 0.50, ≈5700: 0.61, 7078: 0.68, 8147: 0.74, 9600: 0.76–0.82), not the dataset.
+3. Triple accuracy / balanced accuracy: similar; the v2 ACDC circuits are *worse* on the new frame (0.67 vs 0.86 at
+   τ=0; 70 triples, ±≈0.05–0.1).
+4. Overall: more varied data give circuits that transfer the **phrase** part of the computation better, but no small
+   circuit that answers like the model on its own. Faithfulness alone grows with circuit size: the mechanism is
+   **distributed**, and this is a property of the model, not of the dataset.
+
 ## Practical notes
 
 * Free Colab: a session stops after inactivity or a maximum duration, and after heavy use no T4 may be available
