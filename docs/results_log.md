@@ -393,6 +393,58 @@ probe (from 14–19), incongruity interaction (jump 17–21), writers (m18 + lay
 The final computation is *localised* (m18 and a few layer-18 heads write the decision), while the inputs (the two
 sentiments) are computed in many places earlier, which is why edge-level circuits are large.
 
+## Phase 3b · information flow (`03b_information_flow`, DATA = v2, full model)
+
+**Region patching per layer** (12 discovery + 12 held-out pairs per experiment; read from the figure; held-out
+follows discovery closely):
+* situation swap, residual stream: situation tokens R ≈ 1 up to layer 7, falling over layers 8–15 (≈ 0 at 16);
+  **phrase tokens rise over layers 9–14 (peak ≈ 0.65 at 14)** — the situation information is moved onto the phrase;
+  question tokens rise over 13–18 (peak ≈ 1.0 at 18; held-out ≈ 0.8); final token from 19 (0.35 at 19, 0.65 at 20,
+  0.9 at 21, 1.0 at 27). (Phrase tokens dip to ≈ −0.3 at layer 18.)
+* phrase swap: phrase tokens R ≈ 1 up to 13, falling over 14–17; question tokens 12–18 (≈ 1.0 at 18); final 19–21.
+* attention-output patching: small per layer; question tokens ≈ 0.2–0.3 at layers 13–17, final token ≈ 0.25 at 18–19.
+* Notebook line (first layer where final > changed words): situation 16, phrase 18.
+
+**Attention of the last token** (180 triples × P, S, N, Q):
+* the last token almost never attends to the **situation** after the first layers (≤ 0.05);
+* it attends to the **phrase** through a few heads (a20.h16 ≈ 0.4; layer-18 heads), and **the key layer-18 heads
+  attend more to the phrase when situation and phrase are incongruent** (S, Q vs P, N: up to +0.27).
+
+| head | phrase P / S / N / Q | question P / S / N / Q |
+|---|---|---|
+| a18.h15 | 0.045 / **0.315** / 0.047 / **0.163** | 0.732 / 0.438 / 0.748 / 0.482 |
+| a18.h18 | 0.091 / **0.260** / 0.123 / **0.233** | 0.798 / 0.614 / 0.750 / 0.626 |
+| a18.h4 | 0.163 / 0.254 / 0.157 / 0.281 | 0.570 / 0.503 / 0.571 / 0.495 |
+| a18.h13 | 0.140 / 0.225 / 0.159 / 0.198 | 0.449 / 0.399 / 0.465 / 0.357 |
+| a18.h16 | 0.102 / 0.190 / 0.077 / 0.126 | 0.429 / 0.378 / 0.431 / 0.406 |
+| a18.h20 | 0.015 / 0.044 / 0.011 / 0.028 | 0.765 / 0.766 / 0.807 / 0.774 |
+| a17.h1 | 0.075 / 0.190 / 0.098 / 0.232 | 0.825 / 0.715 / 0.799 / 0.670 |
+| a18.h21 | 0.058 / 0.082 / 0.079 / 0.116 | 0.565 / 0.531 / 0.540 / 0.532 |
+
+(situation ≤ 0.05 for all; "other" ≈ 0.1–0.45, mostly `<|im_start|>`.)
+
+**What the key heads write along the sarcasm direction, by source region** (read from the figure): reading the
+**question**, a18.h15 and a18.h18 write strongly **against** sarcasm in P and N (h18: −1.57 / −1.0; h15: −1.05 / −0.87)
+and much less in S and Q (h18: −0.63 / −0.71; h15: −0.28 / −0.45); reading the **phrase** they write **for** sarcasm in
+S (h15 +0.45, h18 +0.16). Summed over all heads of a layer (S − mean(P, N)): ≈ 0 for layers 10–16, small at 17, and
+**≈ 3.6 at layer 18** (question ≈ 2.3, phrase ≈ 0.9, other ≈ 0.4, final ≈ −0.2).
+
+Example (a18.h15, "Today was all about eating fresh pizza / burnt toast. Just perfect / awful."): in all four the head
+attends mostly to "sarcast(ic)" (0.3–0.47) and `<|im_start|>`; in S and Q it also attends to the token that closes the
+phrase (`".`, ≈ 0.05), almost not in P and N.
+
+**The mechanism these results suggest**
+1. Layers 0–7: the situation and the phrase are encoded at their own tokens (phrase polarity decodable from layer 1).
+2. Layers ≈ 8–15: the situation is moved **onto the phrase tokens**, where situation and phrase meet (incongruity).
+3. Layers ≈ 13–18: the information is gathered at the **question tokens** ("sarcastic", "?").
+4. Layer 18, at the last token: heads a18.h15, h18, h4, h13, h16 by default read the question and push towards "No";
+   when the phrase is incongruent with the situation they **shift attention from the question to the end of the phrase**,
+   removing the "No" push and adding a "Yes" push (a gating by attention reallocation); m18 then writes most of the
+   sarcasm direction (61 %).
+5. Layers 19–21: the decision is in the last token (R → 1); steering works from layer 20.
+The final token never reads the situation directly: the information goes situation → phrase → question → final, which
+involves many positions and components — another reason why edge-level circuits are large.
+
 ## Practical notes
 
 * Free Colab: a session stops after inactivity or a maximum duration, and after heavy use no T4 may be available

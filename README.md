@@ -29,6 +29,7 @@ src/                         shared code used by every notebook
   standalone.py              a circuit answering single prompts on its own (edge-level mean ablation)
   direction.py               residual stream per layer, probes, steering, components writing a direction
   flow.py                    attention of the last token per head and region; what heads write, by source region
+  pathpatch.py               pattern vs value patching, knockout at the last token, route patching
   utils.py                   results on Google Drive; compute-once caching
 notebooks/
   data.ipynb                 builds and describes the dataset           (pilot)
@@ -45,6 +46,7 @@ notebooks/
   02e_compare_circuits.ipynb every circuit answers alone (mean ablation) on all prompts vs the full model
   03a_sarcasm_direction.ipynb probes per layer, 2x2 incongruity test, steering, who writes the direction, own sentences
   03b_information_flow.ipynb region patching per layer, attention per head in P/S/N/Q, what key heads read and write
+  03c_path_patching.ipynb    switch (pattern vs value), knockout, routes through phrase/question tokens, mover heads
 docs/results_log.md          numbers and findings of every phase, for the final report
 results/                     outputs of the pilot notebooks
 ```
