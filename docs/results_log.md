@@ -445,6 +445,108 @@ phrase (`".`, ≈ 0.05), almost not in P and N.
 The final token never reads the situation directly: the information goes situation → phrase → question → final, which
 involves many positions and components — another reason why edge-level circuits are large.
 
+## Phase 3c · path patching (`03c_path_patching`, DATA = v2, full model)
+
+20 discovery + 12 held-out pairs per experiment (situation swap, phrase swap); knockout on 100 discovery + 60 held-out
+triples. R = (d − d_corr) / (d_clean − d_corr). Key heads of layer 18 (from 03a): h15, h18, h4, h13, h16.
+
+**1 · Switch: pattern vs values at the last token of layer 18** (denoising; R):
+
+| experiment / split | heads | full | pattern | value |
+|---|---|---|---|---|
+| situation / discovery | 5 key heads | 0.076 | −0.007 | 0.252 |
+| situation / discovery | all 28 heads | 0.110 | 0.004 | 0.274 |
+| situation / held-out | 5 key heads | 0.300 | −0.007 | 0.349 |
+| situation / held-out | all 28 heads | 0.347 | −0.001 | 0.389 |
+| phrase / discovery | 5 key heads | 0.178 | −0.006 | 0.272 |
+| phrase / discovery | all 28 heads | 0.232 | −0.007 | 0.320 |
+| phrase / held-out | 5 key heads | 0.253 | 0.026 | 0.309 |
+| phrase / held-out | all 28 heads | 0.300 | 0.017 | 0.343 |
+
+Single heads ≤ 0.1 (exception: h13 on held-out phrase, 0.19). **Pattern ≈ 0 everywhere; value ≥ full.** The effect
+of the layer-18 heads is due to **what they read** (the values, which already carry the incongruity), **not where
+they look**. The attention shift from the question to the phrase seen in 3b is a correlate, not the cause: the
+"gating by attention reallocation" hypothesis (step 4 of the 3b mechanism) is **rejected**. Value > full: the
+non-sarcastic pattern (more attention on the question tokens) reading sarcastic values gives even more "Yes", which
+suggests that the incongruity is mainly read from the question tokens.
+
+**2 · Knockout (mean ablation at the last token of layer 18)** — share of the S − P/N gap left; triple accuracy:
+
+| ablation | gap left (disc / held) | triple acc. (disc / held) |
+|---|---|---|
+| none | 1.00 / 1.00 (gap 9.9 / 10.3) | 0.79 / 0.70 |
+| 5 key heads | 0.71 / 0.67 | 0.78 / 0.77 |
+| m18 | 0.72 / 0.73 | 0.71 / 0.62 |
+| key heads + m18 | 0.61 / 0.59 | 0.74 / 0.73 |
+| all heads of layer 18 | 0.66 / 0.62 | 0.77 / 0.75 |
+| random 5 heads (3 draws) | 0.93–1.04 | 0.70–0.79 |
+
+The key heads and m18 are **specific** (random heads ≈ no effect), but **not necessary**: ~60 % of the gap and
+almost all the accuracy remain without them. Their contribution is real but redundant — the decision is also made
+by other layers (consistent with the large, distributed circuits of Phase 2). (Held-out baseline: N "Yes" rate 0.52.)
+
+**3 · Routes** (attention outputs at the given positions and layers; denoise = clean → corrupted, "sufficient?";
+noise = corrupted → clean, "necessary?"):
+
+| experiment | route | denoise disc / held | noise disc / held |
+|---|---|---|---|
+| situation | phrase tokens, L8–15 | 0.83 / 0.56 | 0.22 / 0.53 |
+| situation | question tokens, L12–17 | **1.13 / 0.79** | −0.22 / 0.18 |
+| situation | last token, L16–19 | 0.60 / 0.73 | 0.18 / 0.20 |
+| situation | phrase + question | 1.09 / 0.86 | −0.10 / 0.07 |
+| situation | phrase + question + last | 0.99 / 0.98 | 0.01 / 0.01 |
+| phrase | phrase tokens, L8–15 | 0.48 / 0.76 | **0.63 / 1.10** |
+| phrase | question tokens, L12–17 | **1.02 / 1.18** | −0.06 / −0.09 |
+| phrase | last token, L16–19 | 0.64 / 0.62 | 0.15 / 0.22 |
+| phrase | phrase + question | 1.01 / 1.08 | −0.10 / −0.10 |
+| phrase | phrase + question + last | 1.00 / 0.94 | −0.02 / 0.03 |
+
+(Noise R uses the same formula: R ≈ 1 = the clean behaviour survives the blocking, R ≈ 0 = it is destroyed.)
+* **The question tokens (layers 12–17) are a bottleneck: sufficient AND necessary.** Patching only their attention
+  outputs transfers the whole decision (denoise ≈ 1.0–1.2) and blocking them destroys it (noise ≈ −0.2 to 0.2), in
+  both experiments and on held-out.
+* **Last token, layers 16–19:** largely necessary (noise 0.15–0.22) and partly sufficient (0.6–0.7; the rest comes
+  through layers ≥ 20). Together with the knockout: the attention at the last token in 16–19 as a whole matters,
+  but no small set of layer-18 heads is necessary.
+* **Phrase tokens, layers 8–15:** for the situation swap, mostly sufficient (0.83 disc / 0.56 held) and mostly
+  necessary on discovery (noise 0.22; 0.53 held-out) — the situation does pass through the phrase tokens. For the
+  phrase swap, blocking them changes little (0.63 / 1.10): expected, since the phrase itself stays in the residual
+  stream of its tokens; only the attention outputs are patched.
+* All three routes together: R ≈ 1 / ≈ 0 (sanity check: these positions carry all of the effect).
+
+**4 · Movers** (one head patched at the question or phrase tokens; R per head, read from the figure; every single
+head ≤ 0.2): situation → phrase tokens: **a14.h15** (≈ 0.18, by far the largest), smaller a13.h5, a12.h1;
+situation → question tokens: **a15.h27** (≈ 0.12), **a14.h15/h16** (≈ 0.08), a16.h5, a17.h3/h7, a16.h1;
+phrase → question tokens: **a13.h5**, **a14.h13–h18** (several ≈ 0.1), **a15.h27**, a16.h19, a16.h5, a17.h1/h3.
+a14.h15 and a15.h27 appear in both experiments: candidate "movers" of the incongruity into the question tokens.
+
+**Revised mechanism (after 3c)**
+1. Layers 0–7: situation and phrase encoded at their own tokens.
+2. Layers ≈ 8–15: the situation is moved onto the phrase tokens (main mover a14.h15).
+3. Layers ≈ 12–17: the incongruity is gathered at the **question tokens** (movers a13.h5, a14.h13–18, a15.h27, each
+   small); this is a bottleneck — sufficient and necessary.
+4. Layers 16–19, last token: attention reads the **content** (values) of those tokens (necessary as a whole); the
+   layer-18 key heads and m18 write ~30–40 % of the gap, specific but redundant. No attention-gating switch.
+5. Layers 19–21: the decision is formed at the last token.
+
+## Planned: interpretable-by-design baseline (Phase 3d: after 3c, before the extensions)
+
+Chosen classifiers (situation and phrase given separated, from the dataset): **A** VADER (lexicon, no parameters),
+**B** DistilBERT fine-tuned on SST-2 (~67M, no training on our data), **C** all-MiniLM-L6-v2 (~22M) + logistic
+regression trained on discovery labels, every item predicted out-of-fold. Two rules: "disagree" and "directional"
+(they differ only on Q). Notes from a first look: the 140 situations are the **same** in all groups (held-out changes
+only the phrases or the frame), so C needs out-of-fold predictions for situations; VADER: phrases 0.83, situations
+0.75, but 51 % of situations get compound 0 (no sentiment word, e.g. "working on a Sunday") — world knowledge is needed.
+Later (end of the project, if feasible): a small model that separates situation and phrase, and a test set with
+other sentence structures.
+
+Idea: a modular system that is interpretable by construction — one small classifier for the sentiment of the
+situation, one for the sentiment of the phrase, and the rule "sarcastic if they disagree" — compared with the LLM:
+accuracy on v1/v2 (discovery, held-out phrase / frame), agreement with the LLM prompt by prompt, and shared errors
+(in particular the fourth condition Q, pleasant situation + negative phrase, where the LLM says Yes in 53–86 %).
+Classifiers: the early-layer sentiment probes of 3a and/or an off-the-shelf small sentiment model. Question for the
+discussion: the LLM appears to have learned roughly this modular algorithm (two sentiments, then a comparison).
+
 ## Practical notes
 
 * Free Colab: a session stops after inactivity or a maximum duration, and after heavy use no T4 may be available

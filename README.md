@@ -30,6 +30,7 @@ src/                         shared code used by every notebook
   direction.py               residual stream per layer, probes, steering, components writing a direction
   flow.py                    attention of the last token per head and region; what heads write, by source region
   pathpatch.py               pattern vs value patching, knockout at the last token, route patching
+  baseline.py                interpretable baseline: VADER / SST-2 / MiniLM sentiment classifiers + rule
   utils.py                   results on Google Drive; compute-once caching
 notebooks/
   data.ipynb                 builds and describes the dataset           (pilot)
@@ -47,6 +48,7 @@ notebooks/
   03a_sarcasm_direction.ipynb probes per layer, 2x2 incongruity test, steering, who writes the direction, own sentences
   03b_information_flow.ipynb region patching per layer, attention per head in P/S/N/Q, what key heads read and write
   03c_path_patching.ipynb    switch (pattern vs value), knockout, routes through phrase/question tokens, mover heads
+  03d_baseline.ipynb         rule (VADER / SST-2 / MiniLM classifiers) vs Qwen vs the pruned circuit, on v2
 docs/results_log.md          numbers and findings of every phase, for the final report
 results/                     outputs of the pilot notebooks
 ```
@@ -70,6 +72,7 @@ Notebooks 01b, 02d and 02e have a setting `DATA = "v1"` / `"v2"`; with v2 the re
 | 1b | EAP-IG on edges | done |
 | 2 | minimal circuit with ACDC (+ dataset v2) | done |
 | 3 | what the model represents: sarcasm direction (3a), information flow (3b), path patching (3c) | in progress |
+| 3d | interpretable-by-design baseline: two small sentiment classifiers (situation, phrase) + comparison, vs the mechanism found in the LLM (agreement, shared errors e.g. on Q); before the extensions | notebook ready |
 | 4 | faithfulness, minimality, random circuits, held-out phrase | |
 | 5 | implicit question ("Did the person enjoy their day?") | |
 | 6 | iSarcasmEval | |
