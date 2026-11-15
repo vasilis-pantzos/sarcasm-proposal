@@ -32,6 +32,7 @@ src/                         shared code used by every notebook
   pathpatch.py               pattern vs value patching, knockout at the last token, route patching
   baseline.py                interpretable baseline: VADER / SST-2 / MiniLM sentiment classifiers + rule
   implicit.py                implicit question: prompts, metrics, removing the sarcasm direction
+  segment.py                 situation / phrase segmenters, synthetic sentences, iSarcasmEval loader
   utils.py                   results on Google Drive; compute-once caching
 notebooks/
   data.ipynb                 builds and describes the dataset           (pilot)
@@ -51,6 +52,7 @@ notebooks/
   03c_path_patching.ipynb    switch (pattern vs value), knockout, routes through phrase/question tokens, mover heads
   03d_baseline.ipynb         rule (VADER / SST-2 / MiniLM classifiers) vs Qwen vs the pruned circuit, on v2
   05_implicit_question.ipynb extension 1: implicit question ("Is this person actually happy about it?"), Qwen vs circuit vs custom mechanism, causal test
+  06a_segmenter.ipynb        extension 2a: separating situation and phrase (rule / QA / token classifier), iSarcasmEval
 docs/results_log.md          numbers and findings of every phase, for the final report
 results/                     outputs of the pilot notebooks
 ```
@@ -77,4 +79,4 @@ Notebooks 01b, 02d and 02e have a setting `DATA = "v1"` / `"v2"`; with v2 the re
 | 3d | interpretable-by-design baseline: two small sentiment classifiers (situation, phrase) + comparison, vs the mechanism found in the LLM (agreement, shared errors e.g. on Q); before the extensions | notebook ready |
 | 4 | faithfulness, minimality, random circuits, held-out phrase | |
 | 5 | implicit question ("Is this person actually happy about it?") | notebook ready |
-| 6 | iSarcasmEval | |
+| 6 | iSarcasmEval: 6a segmenters (notebook ready), 6b Qwen vs circuit vs custom mechanism | in progress |
