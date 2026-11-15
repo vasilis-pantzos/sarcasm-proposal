@@ -299,25 +299,56 @@ QA_MODEL = "distilbert-base-cased-distilled-squad"
 
 
 class QASegmenter:
+    """Extractive QA without the transformers `pipeline` (removed in transformers 5): the best answer span is the
+    pair (start <= end, at most `max_len` tokens) with the highest start + end logit inside the context; its score
+    is p(start) * p(end)."""
+
     def __init__(self, model=QA_MODEL, q_sit="What happened?", q_phr="How does the writer feel about it?",
-                 min_score=0.05, device=None):
+                 min_score=0.05, device=None, max_len=30):
         import torch
-        from transformers import pipeline
-        dev = 0 if (device is None and torch.cuda.is_available()) else -1
-        self.qa = pipeline("question-answering", model=model, device=dev)
-        self.q_sit, self.q_phr, self.min_score = q_sit, q_phr, min_score
+        from transformers import AutoModelForQuestionAnswering, AutoTokenizer
+        self.torch = torch
+        self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+        self.tok = AutoTokenizer.from_pretrained(model)
+        self.model = AutoModelForQuestionAnswering.from_pretrained(model).to(self.device).eval()
+        self.q_sit, self.q_phr, self.min_score, self.max_len = q_sit, q_phr, min_score, max_len
+
+    def _answers(self, question, contexts):
+        torch = self.torch
+        enc = self.tok([question] * len(contexts), list(contexts), truncation="only_second", max_length=384,
+                       padding=True, return_offsets_mapping=True, return_tensors="pt")
+        offs = enc.pop("offset_mapping").numpy()
+        seq = [enc.sequence_ids(b) for b in range(len(contexts))]
+        if self.model.config.model_type in ("distilbert", "roberta"):
+            enc.pop("token_type_ids", None)
+        with torch.no_grad():
+            o = self.model(**{k: v.to(self.device) for k, v in enc.items()})
+        S, E = o.start_logits.float().cpu().numpy(), o.end_logits.float().cpu().numpy()
+        out = []
+        for b in range(len(contexts)):
+            ctx = np.array([x == 1 for x in seq[b]])
+            if not ctx.any():
+                out.append({"score": 0.0, "start": 0, "end": 0}); continue
+            s, e = np.where(ctx, S[b], -1e9), np.where(ctx, E[b], -1e9)
+            ps = np.exp(s - s.max()); ps /= ps.sum()
+            pe = np.exp(e - e.max()); pe /= pe.sum()
+            T = len(s)
+            M = s[:, None] + e[None, :]
+            ii, jj = np.indices((T, T))
+            M[(jj < ii) | (jj - ii >= self.max_len)] = -np.inf
+            i, j = np.unravel_index(np.argmax(M), M.shape)
+            out.append({"score": float(ps[i] * pe[j]), "start": int(offs[b, i, 0]), "end": int(offs[b, j, 1])})
+        return out
 
     def batch(self, texts, bs=64):
         out = []
         for i in range(0, len(texts), bs):
-            part = texts[i:i + bs]
-            a_s = self.qa(question=[self.q_sit] * len(part), context=list(part), batch_size=bs)
-            a_p = self.qa(question=[self.q_phr] * len(part), context=list(part), batch_size=bs)
-            a_s = a_s if isinstance(a_s, list) else [a_s]
-            a_p = a_p if isinstance(a_p, list) else [a_p]
+            part = list(texts[i:i + bs])
+            a_s = self._answers(self.q_sit, part)
+            a_p = self._answers(self.q_phr, part)
             for t, s, p in zip(part, a_s, a_p):
                 spans = {"SIT": [], "PHR": []}
-                if p["score"] >= self.min_score:
+                if p["score"] >= self.min_score and p["end"] > p["start"]:
                     spans["PHR"].append((p["start"], p["end"]))
                 if s["score"] >= self.min_score:
                     a, b = s["start"], s["end"]
