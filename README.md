@@ -33,6 +33,7 @@ src/                         shared code used by every notebook
   baseline.py                interpretable baseline: VADER / SST-2 / MiniLM sentiment classifiers + rule
   implicit.py                implicit question: prompts, metrics, removing the sarcasm direction
   segment.py                 situation / phrase segmenters, synthetic sentences, iSarcasmEval loader
+  isarcasm.py                tweet prompts, twitter-RoBERTa sentiment, the custom mechanism on tweets, F1
   utils.py                   results on Google Drive; compute-once caching
 notebooks/
   data.ipynb                 builds and describes the dataset           (pilot)
@@ -53,6 +54,7 @@ notebooks/
   03d_baseline.ipynb         rule (VADER / SST-2 / MiniLM classifiers) vs Qwen vs the pruned circuit, on v2
   05_implicit_question.ipynb extension 1: implicit question ("Is this person actually happy about it?"), Qwen vs circuit vs custom mechanism, causal test
   06a_segmenter.ipynb        extension 2a: separating situation and phrase (rule / QA / token classifier), iSarcasmEval
+  06b_isarcasm.ipynb         extension 2b: Qwen vs circuit vs custom mechanism on iSarcasmEval (F1, pairs, causal)
 docs/results_log.md          numbers and findings of every phase, for the final report
 results/                     outputs of the pilot notebooks
 ```

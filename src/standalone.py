@@ -127,3 +127,46 @@ def standalone_d(model, tok, id_lists, masks, ref, graph=None, batch=32, progres
         if progress:
             print(f"  length {T}: {len(idx)} prompts ({done}/{len(id_lists)})")
     return out
+
+
+class ResampledReference(MeanReference):
+    """One mean for prompts of ANY length (real tweets: almost every length is different).
+
+    Every prompt = template prefix (P tokens) + variable middle + template suffix (S tokens). The middle of every
+    prompt is resampled to a fixed number of positions M (nearest position at the same relative place) and the
+    activations are averaged over all prompts. A prompt of another length gets this mean resampled back to its
+    own middle length. The same index map is used for every sender and receiver, so with all edges the circuit
+    still gives exactly the full model."""
+
+    @torch.no_grad()
+    def __init__(self, model, id_lists, graph=None, prefix=0, suffix=0, middle=None, batch=16):
+        self.g = graph or build_graph(model)
+        self.prefix, self.suffix = P, S = prefix, suffix
+        M = middle or int(np.median([len(x) - P - S for x in id_lists]))
+        Tc = P + M + S
+        by_len = {}
+        for ids in id_lists:
+            by_len.setdefault(len(ids), []).append(ids)
+        acc, n = None, 0
+        for T, group in sorted(by_len.items()):
+            mid = T - P - S
+            assert mid >= 1, "prefix + suffix longer than a prompt"
+            idx = torch.tensor(list(range(P)) + [P + int(j * mid / M) for j in range(M)] + list(range(T - S, T)),
+                               device=model.device)
+            for i in range(0, len(group), batch):
+                x = torch.tensor(group[i:i + batch], device=model.device)
+                with _Capture(model, self.g, receivers=True) as c:
+                    final_hidden(model, x)
+                parts = [c.emb] + [c.z[l] for l in range(self.g.n_layers)] + [c.mlp[l] for l in range(self.g.n_layers)] \
+                    + [c.recv[v] for v in range(len(self.g.receivers))]
+                s = [p.float().sum(0, keepdim=True)[:, idx] for p in parts]
+                acc = s if acc is None else [a + b for a, b in zip(acc, s)]
+                n += x.shape[0]
+                dt = parts[0].dtype
+                del c, parts
+        m = [(a / n).to(dt) for a in acc]
+        L, V = self.g.n_layers, len(self.g.receivers)
+        self.means = {Tc: _Ref(m[0], {l: m[1 + l] for l in range(L)}, {l: m[1 + L + l] for l in range(L)},
+                               {v: m[1 + 2 * L + v] for v in range(V)})}
+        self.counts = {Tc: n}
+        self.middle = M
